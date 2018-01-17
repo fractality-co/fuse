@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using MVC;
 using UnityEngine;
 
 namespace uMVC
@@ -11,7 +10,6 @@ namespace uMVC
 	{
 		[Header("View")]
 		public Canvas WorldCanvas;
-
 		public Canvas ScreenCanvas;
 
 		[Header("Controller")]
@@ -26,7 +24,7 @@ namespace uMVC
 			{
 				Type type = Type.GetType(controllerType);
 				if (type == null)
-					throw new InvalidDataException("Invalid Controller type passed: " + controllerType);
+					throw new Exception("Invalid Controller type passed: " + controllerType);
 
 				_instances.Add((Controller) Activator.CreateInstance(type));
 			}
