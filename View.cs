@@ -8,15 +8,14 @@ namespace uMVC
 {
 	public abstract class View : MonoBehaviour
 	{
-		public const string ShowEvent = "ShowEvent";
-		public const string HideEvent = "HideEvent";
-
 		private readonly Dictionary<string, List<Action>> _listeners = new Dictionary<string, List<Action>>();
 
 		[SerializeField] private bool _showOnStart;
 		[SerializeField] private string _containerId;
 		[SerializeField] private UnityEvent _onShow;
 		[SerializeField] private UnityEvent _onHide;
+
+		public bool Active { get; private set; }
 
 		private bool _loaded;
 
@@ -37,11 +36,11 @@ namespace uMVC
 
 		public IEnumerator Load()
 		{
-			if (_loaded)
+			if (Active)
 				Unload(false);
 
 			yield return Setup();
-			_loaded = true;
+			Active = true;
 
 			if (_showOnStart)
 				Show();
@@ -49,10 +48,10 @@ namespace uMVC
 
 		public void Unload(bool destroy = true)
 		{
-			if (!_loaded)
+			if (!Active)
 				return;
 
-			_loaded = false;
+			Active = false;
 			ClearListeners();
 			Cleanup();
 
@@ -62,27 +61,48 @@ namespace uMVC
 
 		public void Show()
 		{
-			if (!_loaded)
-				throw new InvalidOperationException("Attempting to show view but it has not been loaded");
+			if (!Active)
+				throw new InvalidOperationException("[uMVC] Attempting to show view but it has not been loaded");
+
+			if (gameObject.activeSelf)
+				return;
 
 			gameObject.SetActive(true);
 			_onShow.Invoke();
-			Notify(ShowEvent);
 		}
 
 		public void Hide()
 		{
-			if (!_loaded)
-				throw new InvalidOperationException("Attemping to hide view but it has not been loaded");
+			Hide(false);
+		}
 
-			_onHide.Invoke();
-			Notify(HideEvent);
+		// ReSharper disable once MethodOverloadWithOptionalParameter
+		public void Hide(bool instant = false)
+		{
+			if (!Active)
+				throw new InvalidOperationException("[uMVC] Attemping to hide view but it has not been loaded");
+
+			if (!gameObject.activeSelf)
+				return;
+
+			if (!instant)
+			{
+				_onHide.Invoke();
+				StartCoroutine(DelayedHide());
+			}
+			else
+				gameObject.SetActive(false);
+		}
+
+		private IEnumerator DelayedHide()
+		{
+			yield return new WaitForSeconds(5);
+			gameObject.SetActive(false);
 		}
 
 		protected abstract IEnumerator Setup();
 		protected abstract void Cleanup();
 
-		// TODO: ideally, this should be protected and not exposed but for now we want it so the Inspector can change
 		public void Notify(string type)
 		{
 			GetListeners(type).ForEach(callback => { callback(); });
