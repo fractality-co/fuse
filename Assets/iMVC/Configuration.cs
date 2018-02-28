@@ -6,14 +6,22 @@ namespace iMVC
 {
     public class Configuration : ScriptableObject
     {
+        [Header("Asset Management")] 
+        [SerializeField] private AssetLoadMethod _coreLoadMethod = AssetLoadMethod.Resources;
+        
         [Header("State Machine")]
-        public string Start;
-        public List<State> States;
-
+        [SerializeField] private string _start;
+        [SerializeField] private List<State> _states;
+        
         [Serializable]
-        public class State
+        private class State
         {
             public string Name;
+        }
+
+        private enum AssetLoadMethod
+        {
+            Resources
         }
     }
 }

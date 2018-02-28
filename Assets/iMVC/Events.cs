@@ -1,69 +1,63 @@
 ﻿using System;
 using JetBrains.Annotations;
 
-namespace iMVC.Events
+namespace iMVC
 {
-	/// <summary>
-	/// Invokes a method based off a timed interval passed (millseconds).
-	/// </summary>
-	[MeansImplicitUse]
-	[AttributeUsage(AttributeTargets.Method)]
-	public sealed class TickAttribute : Attribute
-	{
-		public readonly TimeSpan Interval;
+    /// <summary>
+    /// Invokes a method based off a timed interval passed (millseconds).
+    /// </summary>
+    [MeansImplicitUse]
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class TickAttribute : Attribute
+    {
+        [UsedImplicitly]
+        public readonly TimeSpan Interval;
 
-		public TickAttribute(double milliseconds)
-		{
-			Interval = TimeSpan.FromMilliseconds(milliseconds);
-		}
-	}
+        public TickAttribute(double milliseconds)
+        {
+            Interval = TimeSpan.FromMilliseconds(milliseconds);
+        }
+    }
 
-	/// <summary>
-	/// Invokes a method per update from engine.
-	/// </summary>
-	[MeansImplicitUse]
-	[AttributeUsage(AttributeTargets.Method)]
-	public sealed class UpdateAttribute : Attribute
-	{
-		public readonly bool IsFixed;
+    [MeansImplicitUse]
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class InputAttribute : Attribute
+    {
+        [UsedImplicitly]
+        public readonly string Button;
 
-		public UpdateAttribute()
-		{
-			IsFixed = false;
-		}
+        public InputAttribute(string button)
+        {
+            Button = button;
+        }
+    }
 
-		public UpdateAttribute(bool isFixed)
-		{
-			IsFixed = isFixed;
-		}
-	}
-		
-	[MeansImplicitUse]
-	[AttributeUsage(AttributeTargets.Delegate | AttributeTargets.Event | AttributeTargets.Method)]
-	public sealed class PublishAttribute : PubSubAttribute
-	{
-		public PublishAttribute(string type) : base(type)
-		{
-			
-		}
-	}
-		
-	[MeansImplicitUse]
-	[AttributeUsage(AttributeTargets.Method)]
-	public sealed class SubscribeAttribute : PubSubAttribute
-	{
-		public SubscribeAttribute(string type) : base(type)
-		{
-		}
-	}
+    [MeansImplicitUse]
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class PublishAttribute : PublishSubcribeAttribute
+    {
+        public PublishAttribute(string type) : base(type)
+        {
+        }
+    }
 
-	public abstract class PubSubAttribute : Attribute
-	{
-		public readonly string Type;
+    [MeansImplicitUse]
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class SubscribeAttribute : PublishSubcribeAttribute
+    {
+        public SubscribeAttribute(string type) : base(type)
+        {
+        }
+    }
 
-		protected PubSubAttribute(string type)
-		{
-			Type = type;
-		}
-	}
+    public abstract class PublishSubcribeAttribute : Attribute
+    {
+        [UsedImplicitly]
+        public readonly string Type;
+
+        protected PublishSubcribeAttribute(string type)
+        {
+            Type = type;
+        }
+    }
 }

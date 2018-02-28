@@ -1,7 +1,7 @@
 ﻿using System;
 using JetBrains.Annotations;
 
-namespace iMVC.Lifecycle
+namespace iMVC
 {
 	/// <summary>
 	/// Invokes a method when the object is being loaded.
