@@ -50,7 +50,7 @@ namespace iMVC.Editor
 
 			if (File.Exists(assetPath))
 			{
-				Debug.LogWarning("Existing implementation (" + template.Filename + ") already created here.");
+				Logger.Warn("Existing implementation (" + template.Filename + ") already created here.");
 				return;
 			}
 

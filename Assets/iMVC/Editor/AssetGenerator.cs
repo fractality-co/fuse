@@ -36,7 +36,7 @@ namespace iMVC.Editor
 				configuration.name = Configuration.AssetName;
 				AssetDatabase.CreateAsset(configuration, Configuration.FullConfigurationPath);
 
-				Debug.Log("Initialized iMVC Configuration ...");
+				Logger.Info("Initialized iMVC Configuration ...");
 			}
 		}
 
@@ -76,7 +76,7 @@ namespace iMVC.Editor
 					asset.name = assetName;
 					AssetDatabase.CreateAsset(asset, assetPath);
 
-					Debug.Log("Created implementation: " + assetName + " [" + implementation + "]");
+					Logger.Info("Created implementation: " + assetName + " [" + implementation + "]");
 				}
 			}
 

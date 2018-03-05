@@ -1,4 +1,4 @@
-﻿﻿using UnityEngine;
+﻿using UnityEngine;
 
 namespace iMVC
 {
@@ -17,20 +17,17 @@ namespace iMVC
 
 		public static void Info(string message)
 		{
-			if (Debug.unityLogger.logEnabled)
-				Debug.Log(Format(message));
+			Debug.Log(Format(message));
 		}
 
 		public static void Warn(string message)
 		{
-			if (Debug.unityLogger.logEnabled)
-				Debug.LogWarning(Format(message));
+			Debug.LogWarning(Format(message));
 		}
 
 		public static void Error(string message)
 		{
-			if (Debug.unityLogger.logEnabled)
-				Debug.LogError(Format(message));
+			Debug.LogError(Format(message));
 		}
 
 		private static string Format(string message)
