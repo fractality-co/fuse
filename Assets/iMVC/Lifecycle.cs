@@ -4,8 +4,9 @@ using JetBrains.Annotations;
 namespace iMVC
 {
 	/// <summary>
-	/// Invokes a method when the object is being loaded.
-	/// Before this invokes, injections will have been loaded.
+	/// Invokes a method when the object is done loading.
+	/// Supports void, bool and IEnumerator (will wait for completion) return types (no arguments).
+	/// Before this invokes, <see cref="InjectAttribute"/> will have been resolved.
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method)]
@@ -13,6 +14,9 @@ namespace iMVC
 	{
 		public readonly uint Order;
 
+		/// <summary>
+		/// Invokes method when the object is done loading. Order passed defines invocation order.
+		/// </summary>
 		public SetupAttribute(uint order = 0)
 		{
 			Order = order;
@@ -20,8 +24,9 @@ namespace iMVC
 	}
 
 	/// <summary>
-	/// Invokes a method when the object is being unloaded.
-	/// Injections will be automatically unloaded after cleanup.
+	/// Invokes a method when the object is about to be unloaded, injections are still valid at this step.
+	/// <see cref="InjectAttribute"/> will be unloaded after cleanup.
+	/// Order passed defines invocation order.
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method)]
@@ -29,21 +34,27 @@ namespace iMVC
 	{
 		public readonly uint Order;
 
+		/// <summary>
+		/// Invokes method when the object is about to be unloaded, <see cref="InjectAttribute"/>s are still valid.
+		/// Order passed defines invocation order.
+		/// </summary>
 		public CleanupAttribute(uint order = 0)
 		{
 			Order = order;
 		}
 	}
 
-
 	/// <summary>
-	/// Injects a dependency by setting a field/property or invoking a method.
+	/// Attempts to resolve the dependency, and is assigned before <see cref="SetupAttribute"/> is invoked.
+	/// For an implementation of iMVC (Model, View or Controller) we return a loaded instance, if none exist we load one.
+	/// For a <see cref="UnityEngine.GameObject"/> or <see cref="UnityEngine.MonoBehaviour"/>, we search within Scene(s).
 	/// </summary>
 	[MeansImplicitUse]
-	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
+	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
 	public sealed class InjectAttribute : Attribute
 	{
 		public readonly string Name;
+		public readonly bool ExactMatch;
 
 		public bool HasName
 		{
@@ -51,18 +62,20 @@ namespace iMVC
 		}
 
 		/// <summary>
-		/// Injects the first / default dependency.
+		/// Injects the first / default dependency that matches the assigned type.
 		/// </summary>
 		public InjectAttribute()
 		{
 		}
 
 		/// <summary>
-		/// Injects the dependency that matches the passed name.
+		/// Injects the dependency that matches the passed name and assigned type.
+		/// By default, it will check full equality but you may have it do a contains check instead.
 		/// </summary>
-		public InjectAttribute(string name)
+		public InjectAttribute(string name, bool exactMatch = true)
 		{
 			Name = name;
+			ExactMatch = exactMatch;
 		}
 	}
 }

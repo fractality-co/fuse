@@ -8,7 +8,7 @@ namespace iMVC.Editor
 {
 	public class ScriptGenerator : AssetPostprocessor
 	{
-		[MenuItem("Window/iMVC/Implementation")]
+		[MenuItem("Window/iMVC/Implementation %#a")]
 		[MenuItem("Assets/iMVC/Implementation")]
 		public static void CreateTemplate()
 		{
@@ -30,9 +30,16 @@ namespace iMVC.Editor
 			};
 		}
 
+		private static string GetNamespaceName()
+		{
+			// ReSharper disable once PossibleNullReferenceException
+			return typeof(ScriptGenerator).Namespace.Replace(".Editor", string.Empty);
+		}
+
 		private static string GetImplementationType<T>() where T : ImplementationAttribute
 		{
-			return typeof(T).Name.Replace("Attribute", string.Empty).Replace("iMVC.", string.Empty);
+			return typeof(T).Name.Replace(typeof(Attribute).ToString(), string.Empty)
+				.Replace(GetNamespaceName() + ".", string.Empty);
 		}
 
 		private static void CreateTemplate<T>(string name, List<Type> implements) where T : ImplementationAttribute
@@ -61,7 +68,7 @@ namespace iMVC.Editor
 			int last = implements.Count - 1;
 			for (int i = 0; i <= last; i++)
 			{
-				foreach (string line in GetMethod(implements[i]))
+				foreach (string line in GetImplementation(implements[i]))
 					allImplementations.Add(line);
 
 				if (i < last)
@@ -75,7 +82,7 @@ namespace iMVC.Editor
 				new[]
 				{
 					implements.Count > 0 ? "using System;\n" : string.Empty,
-					"using iMVC;\n",
+					"using " + GetNamespaceName() + ";\n",
 					"using UnityEngine;\n",
 					"\n",
 					"[" + type + "]\n",
@@ -88,7 +95,7 @@ namespace iMVC.Editor
 			);
 		}
 
-		private static string[] GetMethod(Type type)
+		private static string[] GetImplementation(Type type)
 		{
 			string name = type.Name.Replace(typeof(Attribute).Name, string.Empty);
 
@@ -180,7 +187,6 @@ namespace iMVC.Editor
 		{
 			typeof(TickAttribute),
 			typeof(InputAttribute),
-			typeof(PublishAttribute),
 			typeof(SubscribeAttribute)
 		};
 
@@ -217,7 +223,7 @@ namespace iMVC.Editor
 
 			GUILayout.Space(10);
 
-			_showLifecycle = EditorGUILayout.Foldout(_showLifecycle, "Lifecycle");
+			_showLifecycle = EditorGUILayout.Foldout(_showLifecycle, "Lifecycle (limited)");
 			if (_showLifecycle)
 			{
 				foreach (var type in LifecycleAttributes)
@@ -227,7 +233,7 @@ namespace iMVC.Editor
 				GUILayout.Space(5);
 			}
 
-			_showEvents = EditorGUILayout.Foldout(_showEvents, "Events");
+			_showEvents = EditorGUILayout.Foldout(_showEvents, "Events (limited)");
 			if (_showEvents)
 			{
 				foreach (var type in EventsAttributes)
@@ -235,6 +241,8 @@ namespace iMVC.Editor
 						type.Name.Replace("Attribute", string.Empty));
 			}
 
+			GUILayout.Space(10);
+			GUILayout.Label("For all features, please open script with Editor.");
 			GUILayout.Space(20);
 
 			GUILayout.FlexibleSpace();

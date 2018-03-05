@@ -9,7 +9,7 @@ namespace iMVC.Editor
 {
 	public class AssetGenerator : AssetPostprocessor
 	{
-		[MenuItem("Window/iMVC/Configure")]
+		[MenuItem("Window/iMVC/Configure %#c")]
 		[MenuItem("Assets/iMVC/Configure")]
 		public static void SelectConfiguration()
 		{

@@ -10,7 +10,7 @@ namespace iMVC
 	[AttributeUsage(AttributeTargets.Method)]
 	public sealed class TickAttribute : Attribute
 	{
-		[UsedImplicitly] public readonly TimeSpan Interval;
+		public readonly TimeSpan Interval;
 
 		public TickAttribute(double milliseconds)
 		{
@@ -18,41 +18,50 @@ namespace iMVC
 		}
 	}
 
+	/// <summary>
+	/// When input button matches (exact match) the assigned method will be invoked.
+	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method)]
 	public sealed class InputAttribute : Attribute
 	{
-		[UsedImplicitly] public readonly string Button;
+		public readonly string Button;
 
+		/// <summary>
+		/// When input button matches (exact match) the assigned method will be invoked.
+		/// </summary>
+		/// <param name="button"></param>
 		public InputAttribute(string button)
 		{
 			Button = button;
 		}
 	}
 
+	/// <summary>
+	/// Adds hook to an <code>event</code> defined, that will call <see cref="SubscribeAttribute"/> with corresponding type."/>
+	/// </summary>
 	[MeansImplicitUse]
-	[AttributeUsage(AttributeTargets.Method)]
-	public sealed class PublishAttribute : PublishSubcribeAttribute
+	[AttributeUsage(AttributeTargets.Event)]
+	public sealed class PublishAttribute : Attribute
 	{
-		public PublishAttribute(string type) : base(type)
+		public readonly string Type;
+
+		public PublishAttribute(string type)
 		{
+			Type = type;
 		}
 	}
 
+	/// <summary>
+	/// When events attached to <see cref="PublishAttribute"/> are invoked, and the type specified here matches it will be invoked.
+	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method)]
-	public sealed class SubscribeAttribute : PublishSubcribeAttribute
+	public sealed class SubscribeAttribute : Attribute
 	{
-		public SubscribeAttribute(string type) : base(type)
-		{
-		}
-	}
+		public readonly string Type;
 
-	public abstract class PublishSubcribeAttribute : Attribute
-	{
-		[UsedImplicitly] public readonly string Type;
-
-		protected PublishSubcribeAttribute(string type)
+		public SubscribeAttribute(string type)
 		{
 			Type = type;
 		}
