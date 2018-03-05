@@ -15,9 +15,10 @@ namespace iMVC
 		public readonly uint Order;
 
 		/// <summary>
-		/// Invokes method when the object is done loading. Order passed defines invocation order.
+		/// Invokes method when the object is done loading.
+		/// Order passed defines invocation ascending order (default 100).
 		/// </summary>
-		public SetupAttribute(uint order = 0)
+		public SetupAttribute(uint order = 100)
 		{
 			Order = order;
 		}
@@ -26,7 +27,6 @@ namespace iMVC
 	/// <summary>
 	/// Invokes a method when the object is about to be unloaded, injections are still valid at this step.
 	/// <see cref="InjectAttribute"/> will be unloaded after cleanup.
-	/// Order passed defines invocation order.
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method)]
@@ -36,11 +36,33 @@ namespace iMVC
 
 		/// <summary>
 		/// Invokes method when the object is about to be unloaded, <see cref="InjectAttribute"/>s are still valid.
-		/// Order passed defines invocation order.
+		/// Order passed defines invocation ascending order (default 100).
 		/// </summary>
-		public CleanupAttribute(uint order = 0)
+		public CleanupAttribute(uint order = 100)
 		{
 			Order = order;
+		}
+	}
+
+	/// <summary>
+	/// Takes the value of the assigned field or property and sets it to a condition matching name passed.
+	/// All values taken will be converted to a string, then assigned to the condition.
+	/// NOTE: Conditions are ignored except from Controllers.
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+	public sealed class ConditionAttribute : Attribute
+	{
+		public readonly string Name;
+		public readonly uint Priority;
+
+		/// <summary>
+		/// Finds exact matching condition to set value.
+		/// Priority passed defines resolution in descending order.
+		/// </summary>
+		public ConditionAttribute(string name, uint priority = 0)
+		{
+			Name = name;
+			Priority = priority;
 		}
 	}
 
@@ -48,6 +70,7 @@ namespace iMVC
 	/// Attempts to resolve the dependency, and is assigned before <see cref="SetupAttribute"/> is invoked.
 	/// For an implementation of iMVC (Model, View or Controller) we return a loaded instance, if none exist we load one.
 	/// For a <see cref="UnityEngine.GameObject"/> or <see cref="UnityEngine.MonoBehaviour"/>, we search within Scene(s).
+	/// NOTE: Controllers can inject Model & Views, whereas Model and Views can only inject their own types.
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]

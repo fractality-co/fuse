@@ -46,12 +46,18 @@ namespace iMVC
 			get { return _states; }
 		}
 
+		public List<Condition> Conditions
+		{
+			get { return _conditions; }
+		}
+
 		[Header("State Machine")]
 		[StateReference, SerializeField]
 		private string _start;
 
-		[SerializeField]
-		private List<State> _states;
+		[SerializeField] private List<State> _states;
+		[SerializeField] private List<Transition> _transitions;
+		[SerializeField] private List<Condition> _conditions;
 
 		[Header("Implementation Assets")]
 		[SerializeField]
@@ -80,18 +86,37 @@ namespace iMVC
 	[Serializable]
 	public class State
 	{
-		[SerializeField]
 		public string Name;
 
-		[AttributeTypeReference(typeof(ControllerAttribute)), SerializeField]
+		[AttributeTypeReference(typeof(ControllerAttribute))]
 		public string[] Controllers;
 	}
 
-	internal sealed class StateReference : PropertyAttribute
+	[Serializable]
+	public class Condition
+	{
+		public string Name;
+		public string Initial;
+		public string Expected;
+	}
+
+	[Serializable]
+	public class Transition
+	{
+		[StateReference] public string From;
+		[StateReference] public string To;
+		[ConditionReference] public string[] Conditions;
+	}
+
+	public sealed class StateReference : PropertyAttribute
 	{
 	}
 
-	internal sealed class AttributeTypeReference : PropertyAttribute
+	public sealed class ConditionReference : PropertyAttribute
+	{
+	}
+
+	public sealed class AttributeTypeReference : PropertyAttribute
 	{
 		public readonly Type BaseType;
 
@@ -125,6 +150,35 @@ namespace iMVC
 			else
 			{
 				EditorGUI.LabelField(position, "No States Found");
+			}
+
+			EditorGUI.EndProperty();
+		}
+	}
+	
+	[CustomPropertyDrawer(typeof(ConditionReference))]
+	internal class ConditionReferencePropertyDrawer : PropertyDrawer
+	{
+		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+		{
+			EditorGUI.BeginProperty(position, GUIContent.none, property);
+
+			position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
+
+			List<Condition> options = Configuration.Load().Conditions;
+			if (options.Count > 0)
+			{
+				EditorGUI.BeginChangeCheck();
+
+				int index = options.FindIndex(current => current.Name == property.stringValue);
+				index = EditorGUI.Popup(position, index, options.Select(state => state.Name).ToArray());
+
+				if (EditorGUI.EndChangeCheck())
+					property.stringValue = options[index].Name;
+			}
+			else
+			{
+				EditorGUI.LabelField(position, "No Conditions Found");
 			}
 
 			EditorGUI.EndProperty();

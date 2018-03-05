@@ -39,7 +39,7 @@ namespace iMVC.Editor
 		private static string GetImplementationType<T>() where T : ImplementationAttribute
 		{
 			return typeof(T).Name.Replace(typeof(Attribute).ToString(), string.Empty)
-				.Replace(GetNamespaceName() + ".", string.Empty);
+				.Replace(GetNamespaceName() + ".", string.Empty).Replace(typeof(Attribute).Name, string.Empty);
 		}
 
 		private static void CreateTemplate<T>(string name, List<Type> implements) where T : ImplementationAttribute
