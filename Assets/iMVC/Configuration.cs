@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -30,7 +32,7 @@ namespace iMVC
 			{
 				switch (_loadMethod)
 				{
-					case AssetLoadMethod.Resources:
+					case ImplementationLoadMethod.Resources:
 						return "Resources";
 
 					default:
@@ -39,34 +41,142 @@ namespace iMVC
 			}
 		}
 
-		[Header("State Machine")] [SerializeField]
+		public List<State> States
+		{
+			get { return _states; }
+		}
+
+		[Header("State Machine")]
+		[StateReference, SerializeField]
 		private string _start;
 
-		[SerializeField] private List<State> _states;
+		[SerializeField]
+		private List<State> _states;
 
-		[Header("Implementation Assets")] [SerializeField]
-		private AssetLoadMethod _loadMethod = AssetLoadMethod.Resources;
+		[Header("Implementation Assets")]
+		[SerializeField]
+		private ImplementationLoadMethod _loadMethod = ImplementationLoadMethod.Resources;
 
 		public static Configuration Load()
 		{
-#if UNITY_EDITOR
-			return AssetDatabase.LoadAssetAtPath<Configuration>(FullConfigurationPath);
-#else
 			if (_instance == null)
+			{
+#if UNITY_EDITOR
+				_instance = AssetDatabase.LoadAssetAtPath<Configuration>(FullConfigurationPath);
+#else
 				_instance = Resources.Load<Configuration>(LoadConfigurationPath);
-			return _instance;
 #endif
+			}
+
+			return _instance;
 		}
 	}
 
-	[Serializable]
-	internal class State
-	{
-		public string Name;
-	}
-
-	internal enum AssetLoadMethod
+	internal enum ImplementationLoadMethod
 	{
 		Resources
 	}
+
+	[Serializable]
+	public class State
+	{
+		[SerializeField]
+		public string Name;
+
+		[AttributeTypeReference(typeof(ControllerAttribute)), SerializeField]
+		public string[] Controllers;
+	}
+
+	internal sealed class StateReference : PropertyAttribute
+	{
+	}
+
+	internal sealed class AttributeTypeReference : PropertyAttribute
+	{
+		public readonly Type BaseType;
+
+		public AttributeTypeReference(Type baseType)
+		{
+			BaseType = baseType;
+		}
+	}
+
+#if UNITY_EDITOR
+	[CustomPropertyDrawer(typeof(StateReference))]
+	internal class StateReferencePropertyDrawer : PropertyDrawer
+	{
+		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+		{
+			EditorGUI.BeginProperty(position, GUIContent.none, property);
+
+			position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
+
+			List<State> options = Configuration.Load().States;
+			if (options.Count > 0)
+			{
+				EditorGUI.BeginChangeCheck();
+
+				int index = options.FindIndex(current => current.Name == property.stringValue);
+				index = EditorGUI.Popup(position, index, options.Select(state => state.Name).ToArray());
+
+				if (EditorGUI.EndChangeCheck())
+					property.stringValue = options[index].Name;
+			}
+			else
+			{
+				EditorGUI.LabelField(position, "No States Found");
+			}
+
+			EditorGUI.EndProperty();
+		}
+	}
+
+	[CustomPropertyDrawer(typeof(AttributeTypeReference))]
+	internal class TypeReferencePropertyDrawer : PropertyDrawer
+	{
+		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+		{
+			EditorGUI.BeginProperty(position, GUIContent.none, property);
+
+			position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
+			AttributeTypeReference reference = (AttributeTypeReference) attribute;
+
+			List<string> options = GetImplementations(reference.BaseType);
+			if (options.Count > 0)
+			{
+				EditorGUI.BeginChangeCheck();
+
+				int typeIndex = options.IndexOf(property.stringValue);
+				typeIndex = EditorGUI.Popup(position, typeIndex, options.ToArray());
+
+				if (EditorGUI.EndChangeCheck())
+					property.stringValue = options[typeIndex];
+			}
+			else
+			{
+				EditorGUI.LabelField(position, "No Implementations Found");
+			}
+
+			EditorGUI.EndProperty();
+		}
+
+		private List<string> GetImplementations(Type attributeType)
+		{
+			List<string> result = new List<string>();
+
+			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+			{
+				foreach (Type type in assembly.GetTypes())
+				{
+					if (!type.IsAbstract && type.GetCustomAttributes(attributeType, true).Length > 0)
+					{
+						result.Add(type.Name);
+					}
+				}
+			}
+
+			return result;
+		}
+	}
+#endif
 }

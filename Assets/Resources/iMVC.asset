@@ -11,6 +11,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0297bab0f8a42a3bf620e7722a680e1, type: 3}
   m_Name: iMVC
   m_EditorClassIdentifier: 
-  _start: 
-  _states: []
+  _start: Splash
+  _states:
+  - Name: Splash
+    Controllers: []
+  - Name: Menu
+    Controllers: []
+  - Name: Game
+    Controllers: []
   _loadMethod: 0
