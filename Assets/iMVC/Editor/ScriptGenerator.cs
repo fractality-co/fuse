@@ -8,6 +8,8 @@ namespace iMVC.Editor
 {
 	public class ScriptGenerator : AssetPostprocessor
 	{
+		private const string ImplementationScriptsPath = "Assets/Scripts";
+		
 		[MenuItem("Window/iMVC/Implementation %#a")]
 		[MenuItem("Assets/iMVC/Implementation")]
 		public static void CreateTemplate()
@@ -45,7 +47,9 @@ namespace iMVC.Editor
 		private static void CreateTemplate<T>(string name, List<Type> implements) where T : ImplementationAttribute
 		{
 			FileTemplate template = GetTemplate<T>(name, implements);
-			string path = Configuration.FullScriptsPath + "/" + typeof(T).Name.Replace(typeof(Attribute).Name, string.Empty);
+
+			string implementation = typeof(T).Name.Replace(typeof(Attribute).Name, string.Empty);
+			string path = ImplementationScriptsPath + "/" + implementation;
 			string assetPath = path + "/" + template.Filename;
 
 			if (File.Exists(assetPath))

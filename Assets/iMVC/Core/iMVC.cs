@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 
@@ -7,19 +7,6 @@ namespace iMVC
 	[SuppressMessage("ReSharper", "InconsistentNaming")]
 	public class iMVC : MonoBehaviour
 	{
-		private Configuration _config;
-
-		private void Awake()
-		{
-			_config = Configuration.Load();
-
-			if (_config == null)
-			{
-				Logger.Error("Unable to start iMVC, can't load core Configuration!");
-				Destroy(gameObject);
-			}
-		}
-
 		private void Start()
 		{
 			Logger.Info("Started iMVC");
@@ -33,7 +20,6 @@ namespace iMVC
 
 		private void OnDestroy()
 		{
-			_config = null;
 			Clean();
 
 			Logger.Info("Stopped iMVC");

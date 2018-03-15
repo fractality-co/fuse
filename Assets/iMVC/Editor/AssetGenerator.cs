@@ -9,41 +9,52 @@ namespace iMVC.Editor
 {
 	public class AssetGenerator : AssetPostprocessor
 	{
-		[MenuItem("Window/iMVC/Configure %#c")]
-		[MenuItem("Assets/iMVC/Configure")]
-		public static void SelectConfiguration()
-		{
-			Selection.activeObject = Configuration.Load();
-		}
+		private const string CoreAssetPath = "Assets/Bundles/Core";
+		private const string StatesAssetPath = CoreAssetPath + "/States";
+		private const string CoreBundleName = "imvc.core";
+		private const string ImplementationAssetPath = "Assets/Bundles/Implementations";
+		private const string ImplementationBundleName = "imvc.{0}.{1}";
 
 		private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets,
 			string[] movedAssets,
 			string[] movedFromAssetPaths)
 		{
-			ProcessConfiguraton();
-			ProcessImplementations();
-		}
-
-		private static void ProcessConfiguraton()
-		{
-			string[] assets = AssetDatabase.FindAssets("t:" + typeof(Configuration).Name);
-			if (assets.Length == 0)
-			{
-				string path = Configuration.RootConfigurationPath;
-				Utils.PreparePath(path);
-
-				ScriptableObject configuration = ScriptableObject.CreateInstance<Configuration>();
-				configuration.name = Configuration.AssetName;
-				AssetDatabase.CreateAsset(configuration, Configuration.FullConfigurationPath);
-
-				Logger.Info("Initialized iMVC Configuration ...");
-			}
+			ProcessAssets();
 		}
 
 		[DidReloadScripts]
+		private static void ProcessAssets()
+		{
+			ProcessCore();
+			ProcessImplementations();
+
+			AssetDatabase.RemoveUnusedAssetBundleNames();
+			AssetDatabase.SaveAssets();
+		}
+
+		private static void ProcessCore()
+		{
+			Utils.PreparePath(CoreAssetPath);
+			Utils.PreparePath(StatesAssetPath);
+
+			AssetImporter importer = AssetImporter.GetAtPath(CoreAssetPath);
+			if (importer != null)
+				importer.SetAssetBundleNameAndVariant(CoreBundleName, string.Empty);
+
+			string assetName = typeof(Configuration).Name;
+			string assetPath = CoreAssetPath + "/" + assetName + ".asset";
+			ScriptableObject asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath);
+			if (asset == null)
+			{
+				asset = ScriptableObject.CreateInstance<Configuration>();
+				asset.name = assetName;
+				AssetDatabase.CreateAsset(asset, assetPath);
+			}
+		}
+
 		private static void ProcessImplementations()
 		{
-			// TODO: move all implementations to their correct folders
+			Utils.PreparePath(ImplementationAssetPath);
 
 			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
 			{
@@ -58,11 +69,9 @@ namespace iMVC.Editor
 
 		private static void SyncImplementation(Type type, ImplementationAttribute implementation)
 		{
-			// TODO: migrate re-named implementations
-			// TODO: cleanup removed implementations
+			// TODO: move to correct folders, migrate re-named, cleanup removed implementations
 
-			Configuration config = Configuration.Load();
-			string path = config.FullLoadPath + "/" + implementation + "/" + type.Name;
+			string path = ImplementationAssetPath + "/" + implementation + "/" + type.Name;
 			IEnumerable<string> assetNames = implementation.GetAssets(type);
 			foreach (string assetName in assetNames)
 			{
@@ -71,6 +80,14 @@ namespace iMVC.Editor
 				if (asset == null)
 				{
 					Utils.PreparePath(path);
+					AssetImporter importer = AssetImporter.GetAtPath(path);
+					if (importer != null)
+					{
+						string bundleType = implementation.ToString().ToLower();
+						string bundleName = type.Name.ToLower().Replace(implementation.ToString().ToLower(), string.Empty);
+						importer.SetAssetBundleNameAndVariant(string.Format(ImplementationBundleName, bundleType, bundleName),
+							string.Empty);
+					}
 
 					asset = ScriptableObject.CreateInstance(type);
 					asset.name = assetName;
@@ -79,8 +96,6 @@ namespace iMVC.Editor
 					Logger.Info("Created implementation: " + assetName + " [" + implementation + "]");
 				}
 			}
-
-			AssetDatabase.SaveAssets();
 		}
 	}
 }

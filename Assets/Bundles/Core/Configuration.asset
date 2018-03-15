@@ -8,11 +8,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d0297bab0f8a42a3bf620e7722a680e1, type: 3}
-  m_Name: iMVC
+  m_Script: {fileID: 11500000, guid: ef368e696f744e21b65c3ae2e8216273, type: 3}
+  m_Name: Configuration
   m_EditorClassIdentifier: 
-  _start: 
-  _states: []
-  _transitions: []
-  _conditions: []
-  _loadMethod: 0
+  Start: 
+  Mode: 0
+  Load: 0
+  _host:
+    Develop: 
+    Release: 
