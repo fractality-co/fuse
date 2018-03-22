@@ -1,35 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Fuse.Core;
+using Fuse.Implementation;
 using UnityEditor;
 using UnityEngine;
 
-namespace iMVC.Editor
+namespace Fuse.Editor
 {
+	/// <summary>
+	/// Handles the generation and post-processing of scripts for <see cref="Fuse"/>.
+	/// </summary>
 	public class ScriptGenerator : AssetPostprocessor
 	{
 		private const string ImplementationScriptsPath = "Assets/Scripts";
-		
-		[MenuItem("Window/iMVC/Implementation %#a")]
-		[MenuItem("Assets/iMVC/Implementation")]
-		public static void CreateTemplate()
+
+		[MenuItem("Window/Fuse/New/Implementation %&i")]
+		[MenuItem("Assets/Fuse/New/Implementation")]
+		public static void ShowCreateImplementationWindow()
 		{
-			TemplateWindow window = EditorWindow.GetWindow<TemplateWindow>();
-			window.OnCreate += (name, type, implements) =>
-			{
-				switch (type)
-				{
-					case TemplateWindow.TemplateType.Controller:
-						CreateTemplate<ControllerAttribute>(name, implements);
-						break;
-					case TemplateWindow.TemplateType.Model:
-						CreateTemplate<ModelAttribute>(name, implements);
-						break;
-					case TemplateWindow.TemplateType.View:
-						CreateTemplate<ViewAttribute>(name, implements);
-						break;
-				}
-			};
+			CreateImplementationWindow window = EditorWindow.GetWindow<CreateImplementationWindow>();
+			window.OnCreate += CreateImplementation<ImplementationAttribute>;
 		}
 
 		private static string GetNamespaceName()
@@ -44,7 +35,7 @@ namespace iMVC.Editor
 				.Replace(GetNamespaceName() + ".", string.Empty).Replace(typeof(Attribute).Name, string.Empty);
 		}
 
-		private static void CreateTemplate<T>(string name, List<Type> implements) where T : ImplementationAttribute
+		private static void CreateImplementation<T>(string name, List<Type> implements) where T : ImplementationAttribute
 		{
 			FileTemplate template = GetTemplate<T>(name, implements);
 
@@ -54,11 +45,11 @@ namespace iMVC.Editor
 
 			if (File.Exists(assetPath))
 			{
-				Logger.Warn("Existing implementation (" + template.Filename + ") already created here.");
+				FuseLogger.Warn("Existing implementation (" + template.Filename + ") already created here.");
 				return;
 			}
 
-			Utils.PreparePath(path);
+			EditorUtils.PreparePath(path);
 			File.WriteAllText(assetPath, template.Content);
 			AssetDatabase.ImportAsset(assetPath);
 			AssetDatabase.SaveAssets();
@@ -121,28 +112,26 @@ namespace iMVC.Editor
 			};
 		}
 
-		public class FileTemplate
+		private class FileTemplate
 		{
 			public const string Implements = "{IMPLEMENTS}";
 
 			public readonly string Filename;
-			public readonly string[] Lines;
-			public readonly string[] Implementations;
 
 			public string Content
 			{
 				get
 				{
 					string result = string.Empty;
-					foreach (string line in Lines)
+					foreach (string line in _lines)
 					{
 						if (line.Contains(Implements))
 						{
-							if (Implementations.Length == 0)
+							if (_implementations.Length == 0)
 								result += line.Replace(Implements, string.Empty);
 							else
 							{
-								foreach (string implementLine in Implementations)
+								foreach (string implementLine in _implementations)
 									result += implementLine;
 							}
 
@@ -156,30 +145,25 @@ namespace iMVC.Editor
 				}
 			}
 
+			private readonly string[] _lines;
+			private readonly string[] _implementations;
+
 			public FileTemplate(string filename, string[] lines, string[] implementations)
 			{
 				Filename = filename;
-				Lines = lines;
-				Implementations = implementations;
+				_lines = lines;
+				_implementations = implementations;
 			}
 		}
 	}
 
-	public class TemplateWindow : EditorWindow
+	public class CreateImplementationWindow : EditorWindow
 	{
-		public Action<string, TemplateType, List<Type>> OnCreate;
+		public Action<string, List<Type>> OnCreate;
 
-		public enum TemplateType
-		{
-			Controller,
-			Model,
-			View
-		}
-
-		public string Name { get; private set; }
-		public TemplateType Type { get; private set; }
-		public Dictionary<Type, bool> LifecycleImplements { get; private set; }
-		public Dictionary<Type, bool> EventsImplements { get; private set; }
+		private string Name { get; set; }
+		private Dictionary<Type, bool> LifecycleImplements { get; set; }
+		private Dictionary<Type, bool> EventsImplements { get; set; }
 
 		private static readonly Type[] LifecycleAttributes =
 		{
@@ -197,13 +181,12 @@ namespace iMVC.Editor
 		private bool _showLifecycle = true;
 		private bool _showEvents = true;
 
-		public TemplateWindow()
+		public CreateImplementationWindow()
 		{
 			titleContent = new GUIContent("Implementation");
 			minSize = new Vector2(300, 250);
 			maxSize = new Vector2(minSize.x, 500);
-			Name = "NewController";
-			Type = TemplateType.Controller;
+			Name = "";
 
 			LifecycleImplements = new Dictionary<Type, bool>();
 			foreach (var type in LifecycleAttributes)
@@ -220,14 +203,10 @@ namespace iMVC.Editor
 			GUILayout.BeginVertical();
 
 			Name = EditorGUILayout.TextField("Name", Name);
-			TemplateType lastType = Type;
-			Type = (TemplateType) EditorGUILayout.EnumPopup("Type", Type);
-			if (lastType != Type && Name.Contains(lastType.ToString()))
-				Name = Name.Replace(lastType.ToString(), Type.ToString());
 
 			GUILayout.Space(10);
 
-			_showLifecycle = EditorGUILayout.Foldout(_showLifecycle, "Lifecycle (limited)");
+			_showLifecycle = EditorGUILayout.Foldout(_showLifecycle, "Lifecycle");
 			if (_showLifecycle)
 			{
 				foreach (var type in LifecycleAttributes)
@@ -237,7 +216,7 @@ namespace iMVC.Editor
 				GUILayout.Space(5);
 			}
 
-			_showEvents = EditorGUILayout.Foldout(_showEvents, "Events (limited)");
+			_showEvents = EditorGUILayout.Foldout(_showEvents, "Events");
 			if (_showEvents)
 			{
 				foreach (var type in EventsAttributes)
@@ -263,7 +242,7 @@ namespace iMVC.Editor
 						implements.Add(events.Key);
 
 				if (OnCreate != null)
-					OnCreate(Name, Type, implements);
+					OnCreate(Name, implements);
 				Close();
 			}
 

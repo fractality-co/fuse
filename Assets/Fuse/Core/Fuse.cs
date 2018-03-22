@@ -2,27 +2,30 @@
 using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 
-namespace iMVC
+namespace Fuse.Core
 {
+	/// <summary>
+	/// Core executor and bootstrap for the framework.
+	/// You should not be interacting with this.
+	/// </summary>
 	[SuppressMessage("ReSharper", "InconsistentNaming")]
-	public class iMVC : MonoBehaviour
+	public class Fuse : MonoBehaviour
 	{
 		private void Start()
 		{
-			Logger.Info("Started iMVC");
+			FuseLogger.Info("Started Fuse");
 		}
 
 		private void OnApplicationQuit()
 		{
-			Logger.Info("Application quitting; immediately stopping iMVC ...");
+			FuseLogger.Info("Application quitting; immediately stopping Fuse ...");
 			DestroyImmediate(gameObject);
 		}
 
 		private void OnDestroy()
 		{
 			Clean();
-
-			Logger.Info("Stopped iMVC");
+			FuseLogger.Info("Stopped Fuse");
 		}
 
 		private void Clean()

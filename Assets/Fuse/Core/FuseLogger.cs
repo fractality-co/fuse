@@ -1,13 +1,13 @@
 ﻿using UnityEngine;
 
-namespace iMVC
+namespace Fuse.Core
 {
 	/// <summary>
-	/// Wrapper class specific for iMVC logging.
+	/// Wrapper class specific for Fuse logging.
 	/// </summary>
-	public static class Logger
+	public static class FuseLogger
 	{
-		private const string MessageFormat = "[iMVC] {0}";
+		private const string MessageFormat = "[Fuse] {0}";
 
 		public static bool Enabled
 		{

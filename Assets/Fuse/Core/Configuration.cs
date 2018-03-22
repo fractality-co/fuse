@@ -4,8 +4,11 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace iMVC
+namespace Fuse.Core
 {
+	/// <summary>
+	/// Data relating to the core functionality of <see cref="Fuse"/>.
+	/// </summary>
 	public class Configuration : ScriptableObject
 	{
 		public string Host
@@ -29,7 +32,6 @@ namespace iMVC
 
 		public BuildMode Mode;
 
-		[Header("Loading")]
 		public LoadMethod Load;
 
 		[SerializeField]
@@ -59,6 +61,7 @@ namespace iMVC
 	public sealed class StateReference : PropertyAttribute
 	{
 	}
+
 #if UNITY_EDITOR
 	[CustomPropertyDrawer(typeof(StateReference))]
 	internal class StateReferencePropertyDrawer : PropertyDrawer
@@ -92,7 +95,7 @@ namespace iMVC
 
 		private List<string> GetStates()
 		{
-			return Resources.FindObjectsOfTypeAll<State>().Select(source => source.Name).ToList();
+			return Resources.FindObjectsOfTypeAll<State>().Select(source => source.name).ToList();
 		}
 	}
 #endif

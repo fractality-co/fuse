@@ -1,7 +1,10 @@
 ﻿using System;
 using JetBrains.Annotations;
 
-namespace iMVC
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable NotAccessedField.Global
+// ReSharper disable UnusedMember.Global
+namespace Fuse.Implementation
 {
 	/// <summary>
 	/// Invokes a method based off a timed interval passed (millseconds).

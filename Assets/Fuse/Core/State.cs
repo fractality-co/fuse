@@ -1,19 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Fuse.Implementation;
 using UnityEditor;
 using UnityEngine;
 
-namespace iMVC
+namespace Fuse.Core
 {
-	[CreateAssetMenu(fileName = "State.asset", menuName = "iMVC/Create/State")]
+	/// <summary>
+	/// Each state operates as a state machine and a state.
+	/// Data defined here controls how <see cref="Fuse"/> should handle implementations.
+	/// </summary>
 	public class State : ScriptableObject
 	{
-		public string Name;
+		[StateReference, Tooltip("Optionally, you can make this state a sub-state to another existing one.")]
+		public string Parent;
+
 		public Transition[] Transitions;
 
-		[AttributeTypeReference(typeof(ControllerAttribute))]
-		public string[] Controllers;
+		[AttributeTypeReference(typeof(ImplementationAttribute))]
+		public string[] Implementations;
 	}
 
 	[Serializable]

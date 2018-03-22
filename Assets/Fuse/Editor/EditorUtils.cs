@@ -1,8 +1,11 @@
 ﻿using UnityEditor;
 
-namespace iMVC
+namespace Fuse.Editor
 {
-	public static class Utils
+	/// <summary>
+	/// Helper class for condolidating common Editor actions.
+	/// </summary>
+	public static class EditorUtils
 	{
 		public static void PreparePath(string path)
 		{
