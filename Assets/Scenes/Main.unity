@@ -123,7 +123,7 @@ GameObject:
   - component: {fileID: 917747882}
   - component: {fileID: 917747881}
   m_Layer: 0
-  m_Name: iMVC
+  m_Name: Fuse
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -137,7 +137,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 917747880}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eb1674da19e4ef948abfbec99c43d28b, type: 3}
+  m_Script: {fileID: 11500000, guid: bfd61cd68f9009f4d93f611b262e8724, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!4 &917747882
