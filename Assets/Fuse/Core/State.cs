@@ -9,7 +9,7 @@ namespace Fuse.Core
 {
 	/// <summary>
 	/// Each state operates as a state machine and a state.
-	/// Data defined here controls how <see cref="Fuse"/> should handle implementations.
+	/// Data defined here controls how <see cref="Executor"/> should handle implementations.
 	/// </summary>
 	public class State : ScriptableObject
 	{
@@ -25,8 +25,7 @@ namespace Fuse.Core
 	[Serializable]
 	public class Transition
 	{
-		[StateReference]
-		public string To;
+		[StateReference] public string To;
 
 		public string[] Events;
 	}

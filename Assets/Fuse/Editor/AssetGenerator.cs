@@ -5,26 +5,21 @@ using Fuse.Implementation;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
+using Logger = Fuse.Core.Logger;
 
 namespace Fuse.Editor
 {
 	/// <summary>
-	/// Handles the generation and post-processing of assets for <see cref="Fuse"/>.
+	/// Handles the generation and post-processing of assets for <see cref="Executor"/>.
 	/// </summary>
 	public class AssetGenerator : AssetPostprocessor
 	{
-		private const string CoreAssetPath = "Assets/Bundles/Core";
-		private const string StatesAssetPath = CoreAssetPath + "/States";
-		private const string CoreBundleName = "imvc.core";
-		private const string ImplementationAssetPath = "Assets/Bundles/Implementations";
-		private const string ImplementationBundleName = "imvc.{0}.{1}";
-
 #if UNITY_EDITOR
 		[MenuItem("Window/Fuse/Configure %&c")]
 		[MenuItem("Assets/Fuse/Configure")]
 		private static void EditConfiguration()
 		{
-			Selection.activeObject = AssetDatabase.LoadAssetAtPath<ScriptableObject>(GetConfigurationAssetPath());
+			Selection.activeObject = AssetDatabase.LoadAssetAtPath<ScriptableObject>(Constants.GetConfigurationAssetPath());
 		}
 #endif
 
@@ -38,7 +33,7 @@ namespace Fuse.Editor
 
 		private static void CreateStateAsset(string name)
 		{
-			string path = StatesAssetPath + "/" + name + ".asset";
+			string path = Constants.StatesAssetPath + "/" + name + ".asset";
 
 			State state = ScriptableObject.CreateInstance<State>();
 			state.name = name;
@@ -46,7 +41,7 @@ namespace Fuse.Editor
 			AssetDatabase.CreateAsset(state, path);
 			Selection.activeObject = state;
 
-			FuseLogger.Info("Created new " + typeof(State).Name + ": " + state.name);
+			Logger.Info("Created new " + typeof(State).Name + ": " + state.name);
 		}
 
 		private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets,
@@ -68,25 +63,25 @@ namespace Fuse.Editor
 
 		private static void ProcessCore()
 		{
-			EditorUtils.PreparePath(CoreAssetPath);
-			EditorUtils.PreparePath(StatesAssetPath);
+			EditorUtils.PreparePath(Constants.CoreAssetPath);
+			EditorUtils.PreparePath(Constants.StatesAssetPath);
 
-			AssetImporter importer = AssetImporter.GetAtPath(CoreAssetPath);
+			AssetImporter importer = AssetImporter.GetAtPath(Constants.CoreAssetPath);
 			if (importer != null)
-				importer.SetAssetBundleNameAndVariant(CoreBundleName, string.Empty);
+				importer.SetAssetBundleNameAndVariant(Constants.CoreBundle, string.Empty);
 
-			ScriptableObject asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(GetConfigurationAssetPath());
+			ScriptableObject asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(Constants.GetConfigurationAssetPath());
 			if (asset == null)
 			{
 				asset = ScriptableObject.CreateInstance<Configuration>();
-				asset.name = GetConfigurationAssetName();
-				AssetDatabase.CreateAsset(asset, GetConfigurationAssetPath());
+				asset.name = Constants.GetConfigurationAssetName();
+				AssetDatabase.CreateAsset(asset, Constants.GetConfigurationAssetPath());
 			}
 		}
 
 		private static void ProcessImplementations()
 		{
-			EditorUtils.PreparePath(ImplementationAssetPath);
+			EditorUtils.PreparePath(Constants.ImplementationAssetPath);
 
 			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
 			{
@@ -101,7 +96,7 @@ namespace Fuse.Editor
 
 		private static void SyncImplementation(Type type, ImplementationAttribute implementation)
 		{
-			string path = ImplementationAssetPath + "/" + type.Name;
+			string path = Constants.ImplementationAssetPath + "/" + type.Name;
 			if (!AssetDatabase.IsValidFolder(path))
 			{
 				string assetName = type.Name;
@@ -113,28 +108,17 @@ namespace Fuse.Editor
 					asset = ScriptableObject.CreateInstance(type);
 					asset.name = assetName;
 					AssetDatabase.CreateAsset(asset, assetPath);
-					FuseLogger.Info("Created implementation: " + assetName + " [" + implementation + "]");
+					Logger.Info("Created implementation: " + assetName + " [" + implementation + "]");
 				}
 			}
 
 			AssetImporter importer = AssetImporter.GetAtPath(path);
 			if (importer != null)
 			{
-				string bundleType = implementation.ToString().ToLower();
 				string bundleName = type.Name.ToLower().Replace(implementation.ToString().ToLower(), string.Empty);
-				importer.SetAssetBundleNameAndVariant(string.Format(ImplementationBundleName, bundleType, bundleName),
+				importer.SetAssetBundleNameAndVariant(string.Format(Constants.ImplementationBundle, bundleName),
 					string.Empty);
 			}
-		}
-
-		private static string GetConfigurationAssetName()
-		{
-			return typeof(Configuration).Name;
-		}
-
-		private static string GetConfigurationAssetPath()
-		{
-			return CoreAssetPath + "/" + GetConfigurationAssetName() + ".asset";
 		}
 	}
 

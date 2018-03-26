@@ -1,47 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
 
+// ReSharper disable UnassignedField.Global
+// ReSharper disable NotAccessedField.Global
+// ReSharper disable UnusedMember.Global
 namespace Fuse.Core
 {
 	/// <summary>
-	/// Data relating to the core functionality of <see cref="Fuse"/>.
+	/// Data relating to your applications functionality then executed by <see cref="Executor"/>.
 	/// </summary>
 	public class Configuration : ScriptableObject
 	{
-		public string Host
-		{
-			get
-			{
-				switch (Mode)
-				{
-					case BuildMode.Develop:
-						return _host.Develop;
-					case BuildMode.Release:
-						return _host.Release;
-					default:
-						throw new ArgumentOutOfRangeException();
-				}
-			}
-		}
-
-		[StateReference]
-		public string Start;
-
-		public BuildMode Mode;
-
-		public LoadMethod Load;
-
-		[SerializeField]
-		private Hosting _host;
+		[StateReference] public string Start;
+		public Loading Implementations;
 	}
 
 	public enum LoadMethod
 	{
 		Baked,
-		Hybrid,
 		Online
 	}
 
@@ -56,6 +37,33 @@ namespace Fuse.Core
 	{
 		public string Develop;
 		public string Release;
+	}
+
+	[Serializable]
+	public class Loading
+	{
+		public LoadMethod Load;
+		public Hash128 Version;
+
+		[SerializeField, UsedImplicitly] private Hosting _host;
+
+		public string GetPath(string asset)
+		{
+			return Application.streamingAssetsPath + Path.DirectorySeparatorChar + asset;
+		}
+
+		public Uri GetUri(BuildMode mode, string asset)
+		{
+			switch (mode)
+			{
+				case BuildMode.Develop:
+					return new Uri(new Uri(_host.Develop), new Uri(asset));
+				case BuildMode.Release:
+					return new Uri(new Uri(_host.Release), new Uri(asset));
+				default:
+					throw new ArgumentOutOfRangeException("mode", mode, null);
+			}
+		}
 	}
 
 	public sealed class StateReference : PropertyAttribute

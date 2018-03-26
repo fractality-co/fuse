@@ -5,16 +5,15 @@ using Fuse.Core;
 using Fuse.Implementation;
 using UnityEditor;
 using UnityEngine;
+using Logger = Fuse.Core.Logger;
 
 namespace Fuse.Editor
 {
 	/// <summary>
-	/// Handles the generation and post-processing of scripts for <see cref="Fuse"/>.
+	/// Handles the generation and post-processing of scripts for <see cref="Executor"/>.
 	/// </summary>
 	public class ScriptGenerator : AssetPostprocessor
 	{
-		private const string ImplementationScriptsPath = "Assets/Scripts";
-
 		[MenuItem("Window/Fuse/New/Implementation %&i")]
 		[MenuItem("Assets/Fuse/New/Implementation")]
 		public static void ShowCreateImplementationWindow()
@@ -40,12 +39,12 @@ namespace Fuse.Editor
 			FileTemplate template = GetTemplate<T>(name, implements);
 
 			string implementation = typeof(T).Name.Replace(typeof(Attribute).Name, string.Empty);
-			string path = ImplementationScriptsPath + "/" + implementation;
+			string path = Constants.ImplementationScriptsPath + "/" + implementation;
 			string assetPath = path + "/" + template.Filename;
 
 			if (File.Exists(assetPath))
 			{
-				FuseLogger.Warn("Existing implementation (" + template.Filename + ") already created here.");
+				Logger.Warn("Existing implementation (" + template.Filename + ") already created here.");
 				return;
 			}
 

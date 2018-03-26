@@ -5,7 +5,7 @@ namespace Fuse.Core
 	/// <summary>
 	/// Wrapper class specific for Fuse logging.
 	/// </summary>
-	public static class FuseLogger
+	public static class Logger
 	{
 		private const string MessageFormat = "[Fuse] {0}";
 
