@@ -17,7 +17,7 @@ namespace Fuse.Core
 	public class Configuration : ScriptableObject
 	{
 		[StateReference] public string Start;
-		public Loading Implementations;
+		public Loading LoadImplementations; // TODO: more control over individual implementation / versioning
 	}
 
 	public enum LoadMethod
@@ -43,7 +43,7 @@ namespace Fuse.Core
 	public class Loading
 	{
 		public LoadMethod Load;
-		public Hash128 Version;
+		public uint Version;
 
 		[SerializeField, UsedImplicitly] private Hosting _host;
 

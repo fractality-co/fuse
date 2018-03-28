@@ -1,9 +1,6 @@
 ﻿using System;
 using JetBrains.Annotations;
 
-// ReSharper disable MemberCanBePrivate.Global
-// ReSharper disable NotAccessedField.Global
-// ReSharper disable UnusedMember.Global
 namespace Fuse.Implementation
 {
 	/// <summary>
@@ -18,25 +15,6 @@ namespace Fuse.Implementation
 		public TickAttribute(double milliseconds)
 		{
 			Interval = TimeSpan.FromMilliseconds(milliseconds);
-		}
-	}
-
-	/// <summary>
-	/// When input button matches (exact match) the assigned method will be invoked.
-	/// </summary>
-	[MeansImplicitUse]
-	[AttributeUsage(AttributeTargets.Method)]
-	public sealed class InputAttribute : Attribute
-	{
-		public readonly string Button;
-
-		/// <summary>
-		/// When input button matches (exact match) the assigned method will be invoked.
-		/// </summary>
-		/// <param name="button"></param>
-		public InputAttribute(string button)
-		{
-			Button = button;
 		}
 	}
 

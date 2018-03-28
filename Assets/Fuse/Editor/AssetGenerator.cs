@@ -115,7 +115,7 @@ namespace Fuse.Editor
 			AssetImporter importer = AssetImporter.GetAtPath(path);
 			if (importer != null)
 			{
-				string bundleName = type.Name.ToLower().Replace(implementation.ToString().ToLower(), string.Empty);
+				string bundleName = type.Name.ToLower();
 				importer.SetAssetBundleNameAndVariant(string.Format(Constants.ImplementationBundle, bundleName),
 					string.Empty);
 			}

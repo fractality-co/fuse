@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Object = UnityEngine.Object;
 #if UNITY_EDITOR
 using UnityEditor;
 
@@ -14,6 +15,25 @@ namespace Fuse.Core
 	/// </summary>
 	public class Executor : MonoBehaviour
 	{
+		private class Implementation
+		{
+			public readonly string Name;
+			public uint References;
+			public bool Loaded;
+			public bool Setup;
+			public List<Object> Assets;
+
+			public bool Active
+			{
+				get { return References > 0; }
+			}
+
+			public Implementation(string name)
+			{
+				Name = name;
+			}
+		}
+
 		[SerializeField] private bool _simulateBundles;
 		[SerializeField] private BuildMode _mode;
 		[SerializeField] private Loading _core;
@@ -23,17 +43,17 @@ namespace Fuse.Core
 		private List<State> _allStates;
 
 		private State _root;
-		private Dictionary<string, int> _implementations;
+		private Dictionary<string, Implementation> _implementations;
 
 		private void Awake()
 		{
 			_bundles = new AssetBundles(_simulateBundles);
-			_implementations = new Dictionary<string, int>();
+			_implementations = new Dictionary<string, Implementation>();
 		}
 
 		private IEnumerator Start()
 		{
-			yield return LoadBundle(_core, Constants.CoreBundleFile, 1);
+			yield return LoadImplementation(_core, Constants.CoreBundleFile);
 
 			yield return _bundles.LoadAsset<Configuration>(
 				Constants.GetConfigurationAssetPath(),
@@ -63,59 +83,7 @@ namespace Fuse.Core
 			Logger.Info("Stopped");
 		}
 
-		private void SetState(string stateName)
-		{
-			if (_root != null)
-			{
-				foreach (KeyValuePair<string, int> pair in GetReferenceTree(_root))
-					UnloadImplementation(pair.Key, pair.Value);
-			}
-
-			_root = GetState(stateName);
-			if (_root == null)
-			{
-				FatalError("Attempting to go invalid state, unable to find: " + stateName);
-				return;
-			}
-
-			foreach (KeyValuePair<string, int> pair in GetReferenceTree(_root))
-				LoadImplementation(pair.Key, pair.Value);
-		}
-
-		private State GetState(string stateName)
-		{
-			return _allStates.Find(current => current.name == stateName);
-		}
-
-		private Dictionary<string, int> GetReferenceTree(State state)
-		{
-			throw new NotImplementedException("Find top-level dependencies via state tree");
-		}
-
-		private void UnloadImplementation(string implementation, int references = 1)
-		{
-			if (!_implementations.ContainsKey(implementation))
-			{
-				Logger.Warn("Attempting to unload a implementation reference, but it is not loaded: " + implementation);
-				return;
-			}
-
-			_implementations[implementation] -= references;
-		}
-
-		private void LoadImplementation(string implementation, int references)
-		{
-			if (_implementations.ContainsKey(implementation))
-			{
-				Logger.Info("Implementation already loaded, skipping load: " + implementation);
-				OnBundleLoaded(implementation, references);
-				return;
-			}
-
-			StartCoroutine(LoadBundle(_configuration.Implementations, implementation, references));
-		}
-
-		private void FatalError(string message)
+		private static void FatalError(string message)
 		{
 			Logger.Error("Encountered a fatal error!\n" + message);
 
@@ -126,20 +94,75 @@ namespace Fuse.Core
 #endif
 		}
 
-		private IEnumerator LoadBundle(Loading loading, string bundleName, int references)
+		private void SetState(string stateName)
 		{
-			Logger.Info("Loading " + bundleName + " ...");
+			if (_root != null)
+			{
+				foreach (string implementation in GetImplementations(_root))
+					RemoveImplementation(implementation);
+			}
 
-			string asset = bundleName + Constants.BundleExtension;
+			_root = GetState(stateName);
+
+			foreach (string implementation in GetImplementations(_root))
+				AddImplementation(implementation);
+
+			foreach (KeyValuePair<string, Implementation> implementation in _implementations)
+			{
+				if (!implementation.Value.Active)
+					UnloadImplementation(implementation.Key);
+				else if (!implementation.Value.Loaded)
+					StartCoroutine(LoadImplementation(_configuration.LoadImplementations, implementation.Value.Name));
+			}
+		}
+
+		private State GetState(string stateName)
+		{
+			return _allStates.Find(current => current.name == stateName);
+		}
+
+		private List<string> GetImplementations(State state)
+		{
+			List<string> result = new List<string>();
+
+			while (state != null)
+			{
+				result.AddRange(state.Implementations);
+				state = GetState(state.Parent);
+			}
+
+			return result;
+		}
+
+		private void RemoveImplementation(string implementation)
+		{
+			_implementations[implementation].References--;
+		}
+
+		private void AddImplementation(string implementation)
+		{
+			if (!_implementations.ContainsKey(implementation))
+				_implementations[implementation] = new Implementation(implementation);
+
+			_implementations[implementation].References++;
+		}
+
+		private IEnumerator LoadImplementation(Loading loading, string implementation)
+		{
+			Logger.Info("Loading implementation: " + implementation + " ...");
+
+			_implementations[implementation].Loaded = true;
+
+			string asset = implementation.ToLower().Trim() + Constants.BundleExtension;
 			switch (loading.Load)
 			{
 				case LoadMethod.Baked:
 					yield return _bundles.LoadBundle
 					(
 						loading.GetPath(asset),
-						bundle => { OnBundleLoaded(bundleName, references); },
-						progress => { OnBundleProgress(bundleName, progress); },
-						error => { OnBundleError(bundleName, error); }
+						bundle => { OnImplementationLoaded(implementation); },
+						null,
+						error => { OnImplementationLoadError(implementation, error); }
 					);
 					break;
 				case LoadMethod.Online:
@@ -147,9 +170,9 @@ namespace Fuse.Core
 					(
 						loading.GetUri(_mode, asset),
 						loading.Version,
-						bundle => { OnBundleLoaded(bundleName, references); },
-						progress => { OnBundleProgress(bundleName, progress); },
-						error => { OnBundleError(bundleName, error); }
+						bundle => { OnImplementationLoaded(implementation); },
+						null,
+						error => { OnImplementationLoadError(implementation, error); }
 					);
 					break;
 				default:
@@ -157,62 +180,54 @@ namespace Fuse.Core
 			}
 		}
 
-		private void UnloadBundle(string bundleName)
+		private void UnloadImplementation(string implementation)
 		{
-			if (!_implementations.ContainsKey(bundleName))
-			{
-				Logger.Error("Attempting to unload implementation bundle when none exist for it: " + bundleName);
-				return;
-			}
+			StartCoroutine(CleanupImplementation(implementation));
 
-			if (_implementations[bundleName] > 0)
-			{
-				Logger.Warn("Attempted to unload bundle when there are references to it: " + bundleName);
-				return;
-			}
-
-			_implementations.Remove(bundleName);
-			_bundles.UnloadBundle(bundleName, true);
-			Logger.Info("Unloaded bundle: " + bundleName);
+			Logger.Info("Unloaded implementation: " + implementation);
 		}
 
-		private void OnBundleLoaded(string bundleName, int references)
+		private void OnImplementationLoaded(string implementation)
 		{
-			Logger.Info("Loaded bundle: " + bundleName);
+			Logger.Info("Loaded bundle: " + implementation);
 
-			if (bundleName != Constants.CoreBundle)
-			{
-				if (!_implementations.ContainsKey(bundleName))
-				{
-					_implementations[bundleName] = 0;
-					StartCoroutine(SetupImplementation(bundleName));
-				}
+			if (implementation == Constants.CoreBundle) return;
 
-				_implementations[bundleName] += references;
-			}
+			if (!_implementations[implementation].Setup)
+				StartCoroutine(SetupImplementation(implementation));
 		}
 
-		private void OnBundleProgress(string bundleName, float progress)
+		private void OnImplementationLoadError(string implementation, string error)
 		{
-		}
-
-		private void OnBundleError(string bundleName, string error)
-		{
-			if (bundleName == Constants.CoreBundle)
-			{
-				FatalError(error);
-				return;
-			}
-
-			Logger.Error(error);
+			FatalError(implementation + "\n" + error);
 		}
 
 		private IEnumerator SetupImplementation(string implementation)
 		{
+			yield return _bundles.LoadAssets(
+				implementation,
+				Type.GetType(implementation, true, true),
+				result => { _implementations[implementation].Assets = result; },
+				null,
+				FatalError);
+
+			// TODO: implementation vs implementations when loading and assigned to state, how do we solve this?
+			// TODO: inject invocations
+			// TODO: setup invocations
+			// TODO: add pub/sub hooks
+
+			_implementations[implementation].Setup = true;
 		}
 
 		private IEnumerator CleanupImplementation(string implementation)
 		{
+			// TODO: cleanup invocations
+			// TODO: remove pub/sub hooks
+
+			yield return null;
+
+			_implementations.Remove(implementation);
+			_bundles.UnloadBundle(implementation, true);
 		}
 	}
 }

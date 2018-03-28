@@ -96,8 +96,6 @@ namespace Fuse.Editor
 			string param = string.Empty;
 			if (type == typeof(SubscribeAttribute) || type == typeof(PublishAttribute))
 				param = "(\"EventType\")";
-			else if (type == typeof(InputAttribute))
-				param = "(\"ButtonName\")";
 			else if (type == typeof(TickAttribute))
 				param = "(1000)";
 
@@ -173,7 +171,6 @@ namespace Fuse.Editor
 		private static readonly Type[] EventsAttributes =
 		{
 			typeof(TickAttribute),
-			typeof(InputAttribute),
 			typeof(SubscribeAttribute)
 		};
 

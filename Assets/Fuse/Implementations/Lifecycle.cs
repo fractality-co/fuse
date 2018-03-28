@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections;
-using Fuse.Core;
 using JetBrains.Annotations;
 
-// ReSharper disable MemberCanBePrivate.Global
-// ReSharper disable NotAccessedField.Global
-// ReSharper disable UnusedMember.Global
 namespace Fuse.Implementation
 {
 	/// <summary>
@@ -37,21 +33,6 @@ namespace Fuse.Implementation
 		public CleanupAttribute(uint order = 100)
 		{
 			Order = order;
-		}
-	}
-
-	/// <summary>
-	/// Process only when the build is in the specified environment.
-	/// </summary>
-	[MeansImplicitUse]
-	[AttributeUsage(AttributeTargets.All)]
-	public sealed class BuildModeAttribute : Attribute
-	{
-		public readonly BuildMode BuildMode;
-
-		public BuildModeAttribute(BuildMode buildMode)
-		{
-			BuildMode = buildMode;
 		}
 	}
 }

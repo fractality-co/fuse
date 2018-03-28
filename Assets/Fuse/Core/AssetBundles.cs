@@ -22,7 +22,7 @@ namespace Fuse.Core
 			_simulateBundles = simulateBundles;
 		}
 
-		public IEnumerator LoadBundle(Uri uri, Hash128 version, Action<string> onComplete = null,
+		public IEnumerator LoadBundle(Uri uri, uint version, Action<string> onComplete = null,
 			Action<float> onProgress = null, Action<string> onError = null)
 		{
 			UnityWebRequest request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, version, 0);
@@ -144,6 +144,39 @@ namespace Fuse.Core
 				onComplete(asset);
 		}
 
+		public IEnumerator LoadAssets(string bundle, Type type, Action<List<Object>> onComplete,
+			Action<float> onProgress = null,
+			Action<string> onError = null)
+		{
+#if UNITY_EDITOR
+			if (_simulateBundles)
+			{
+				onComplete(LoadEditorAssets(bundle, type));
+				yield break;
+			}
+#endif
+
+			AssetBundle assetBundle = AssetBundle.GetAllLoadedAssetBundles().First(loaded => loaded.name == bundle);
+			if (assetBundle == null)
+			{
+				if (onError != null)
+					onError("Unable to find a loaded Asset Bundle with that name.");
+
+				yield break;
+			}
+
+			AssetBundleRequest assetBundleRequest = assetBundle.LoadAllAssetsAsync(type);
+			while (!assetBundleRequest.isDone)
+			{
+				yield return null;
+
+				if (onProgress != null)
+					onProgress(assetBundleRequest.progress);
+			}
+
+			onComplete(assetBundleRequest.allAssets.ToList());
+		}
+
 		public IEnumerator LoadAssets<T>(string bundle, Action<List<T>> onComplete,
 			Action<float> onProgress = null,
 			Action<string> onError = null) where T : Object
@@ -252,6 +285,30 @@ namespace Fuse.Core
 				{
 					// make sure it is the correct type, even if it matches our path
 					T loaded = AssetDatabase.LoadAssetAtPath<T>(assetPath);
+					if (loaded != null)
+						result.Add(loaded);
+				}
+			}
+
+			return result;
+		}
+
+		private static List<Object> LoadEditorAssets(string bundle, Type type)
+		{
+			List<Object> result = new List<Object>();
+
+			// find all assets that are within an asset bundle, and match our type
+			string[] bundleAssetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(bundle);
+			string typeFilter = string.Format("t:{0}", type.Name);
+			string[] guids = AssetDatabase.FindAssets(typeFilter);
+			foreach (string guid in guids)
+			{
+				// find asset that matches our passed path
+				string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+				if (bundleAssetPaths.Contains(assetPath))
+				{
+					// make sure it is the correct type, even if it matches our path
+					Object loaded = AssetDatabase.LoadAssetAtPath(assetPath, type);
 					if (loaded != null)
 						result.Add(loaded);
 				}

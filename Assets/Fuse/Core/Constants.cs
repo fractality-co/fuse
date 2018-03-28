@@ -7,6 +7,7 @@
 		public const string ImplementationAssetPath = "Assets/Bundles/Implementations";
 		public const string ImplementationScriptsPath = "Assets/Scripts";
 
+		public const string AssetExtension = ".asset";
 		public const string BundleExtension = ".unity3d";
 		public const string CoreBundle = "fuse-core";
 		public const string CoreBundleFile = CoreBundle + BundleExtension;
@@ -20,7 +21,12 @@
 
 		public static string GetConfigurationAssetPath()
 		{
-			return CoreAssetPath + "/" + GetConfigurationAssetName() + ".asset";
+			return CoreAssetPath + "/" + GetConfigurationAssetName() + AssetExtension;
+		}
+
+		public static string GetImplementationAssetPath(string implementation, string name)
+		{
+			return ImplementationAssetPath + "/" + implementation + "/" + name + AssetExtension;
 		}
 	}
 }
