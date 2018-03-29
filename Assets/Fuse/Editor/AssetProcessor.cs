@@ -14,17 +14,24 @@ namespace Fuse.Editor
 	/// </summary>
 	public class AssetGenerator : AssetPostprocessor
 	{
-#if UNITY_EDITOR
+		private const string SimulateMenuItem = "Fuse/Assets/Simulate %&m";
+
 		[MenuItem("Fuse/Configure %&c")]
 		private static void EditConfiguration()
 		{
 			Selection.activeObject = AssetDatabase.LoadAssetAtPath<ScriptableObject>(Constants.GetConfigurationAssetPath());
 		}
-#endif
 
-		[MenuItem("Fuse/Assets/Simulate %&m")]
+		[MenuItem(SimulateMenuItem)]
 		public static void ToggleSimulateAssets()
 		{
+			AssetBundles.Simulate = !AssetBundles.Simulate;
+		}
+
+		[MenuItem(SimulateMenuItem, true)]
+		public static void ToggleSimulateAssetsValidate()
+		{
+			Menu.SetChecked(SimulateMenuItem, AssetBundles.Simulate);
 		}
 
 		[MenuItem("Fuse/Assets/Build %&b")]

@@ -11,22 +11,22 @@ using Object = UnityEngine.Object;
 namespace Fuse.Core
 {
 	[SuppressMessage("ReSharper", "UnusedMember.Global")]
-	public class AssetBundles
+	public static class AssetBundles
 	{
-		private readonly bool _simulateBundles;
-		private readonly int _requestTimeout;
+#if UNITY_EDITOR
+		private const string SimulateKey = "SimulateAssetBundles";
 
-		public AssetBundles(bool simulateBundles, int requestTimeout = 120)
+		public static bool Simulate
 		{
-			_requestTimeout = requestTimeout;
-			_simulateBundles = simulateBundles;
+			get { return EditorPrefs.GetBool(SimulateKey, true); }
+			set { EditorPrefs.SetBool(SimulateKey, value); }
 		}
+#endif
 
-		public IEnumerator LoadBundle(Uri uri, uint version, Action<string> onComplete = null,
+		public static IEnumerator LoadBundle(Uri uri, uint version, Action<string> onComplete = null,
 			Action<float> onProgress = null, Action<string> onError = null)
 		{
 			UnityWebRequest request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, version, 0);
-			request.timeout = _requestTimeout;
 
 			UnityWebRequestAsyncOperation sendRequest = request.SendWebRequest();
 			while (!sendRequest.isDone)
@@ -53,7 +53,7 @@ namespace Fuse.Core
 				onComplete(assetBundle.name);
 		}
 
-		public IEnumerator LoadBundle(string path, Action<string> onComplete = null, Action<float> onProgress = null,
+		public static IEnumerator LoadBundle(string path, Action<string> onComplete = null, Action<float> onProgress = null,
 			Action<string> onError = null)
 		{
 			AssetBundleCreateRequest request = AssetBundle.LoadFromFileAsync(path);
@@ -82,7 +82,7 @@ namespace Fuse.Core
 				onComplete(assetBundle.name);
 		}
 
-		public bool UnloadBundle(string bundleName, bool unloadActiveAssets)
+		public static bool UnloadBundle(string bundleName, bool unloadActiveAssets)
 		{
 			AssetBundle loadedBundle = AssetBundle.GetAllLoadedAssetBundles().First(bundle => bundle.name == bundleName);
 			if (loadedBundle == null)
@@ -93,19 +93,19 @@ namespace Fuse.Core
 			return true;
 		}
 
-		public void UnloadAllBundles(bool unloadActiveAssets)
+		public static void UnloadAllBundles(bool unloadActiveAssets)
 		{
 			AssetBundle.UnloadAllAssetBundles(unloadActiveAssets);
 			Clean();
 		}
 
-		public IEnumerator LoadAsset<T>(string path, Action<T> onComplete, Action<float> onProgress = null,
+		public static IEnumerator LoadAsset<T>(string path, Action<T> onComplete, Action<float> onProgress = null,
 			Action<string> onError = null) where T : Object
 		{
 			path = path.ToLower().Trim();
 
 #if UNITY_EDITOR
-			if (_simulateBundles)
+			if (Simulate)
 			{
 				onComplete(LoadEditorAsset<T>(path));
 				yield break;
@@ -144,12 +144,12 @@ namespace Fuse.Core
 				onComplete(asset);
 		}
 
-		public IEnumerator LoadAssets(string bundle, Type type, Action<List<Object>> onComplete,
+		public static IEnumerator LoadAssets(string bundle, Type type, Action<List<Object>> onComplete,
 			Action<float> onProgress = null,
 			Action<string> onError = null)
 		{
 #if UNITY_EDITOR
-			if (_simulateBundles)
+			if (Simulate)
 			{
 				onComplete(LoadEditorAssets(bundle, type));
 				yield break;
@@ -177,12 +177,12 @@ namespace Fuse.Core
 			onComplete(assetBundleRequest.allAssets.ToList());
 		}
 
-		public IEnumerator LoadAssets<T>(string bundle, Action<List<T>> onComplete,
+		public static IEnumerator LoadAssets<T>(string bundle, Action<List<T>> onComplete,
 			Action<float> onProgress = null,
 			Action<string> onError = null) where T : Object
 		{
 #if UNITY_EDITOR
-			if (_simulateBundles)
+			if (Simulate)
 			{
 				onComplete(LoadEditorAssets<T>(bundle));
 				yield break;
@@ -210,10 +210,10 @@ namespace Fuse.Core
 			onComplete(assetBundleRequest.allAssets.Cast<T>().ToList());
 		}
 
-		private string GetBundleWithAsset(string path)
+		private static string GetBundleWithAsset(string path)
 		{
 #if UNITY_EDITOR
-			if (_simulateBundles)
+			if (Simulate)
 				return FindEditorAssetsBundle(path);
 #endif
 
@@ -224,7 +224,7 @@ namespace Fuse.Core
 			return string.Empty;
 		}
 
-		private void Clean()
+		private static void Clean()
 		{
 			Resources.UnloadUnusedAssets();
 			GC.Collect();

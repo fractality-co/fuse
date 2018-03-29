@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using UnityEngine;
 using Object = UnityEngine.Object;
 #if UNITY_EDITOR
@@ -22,7 +23,7 @@ namespace Fuse.Core
 			public uint Count;
 			public bool Loaded;
 			public bool Setup;
-			public Object Asset;
+			[UsedImplicitly] public Object Asset;
 
 			public bool Active
 			{
@@ -35,34 +36,26 @@ namespace Fuse.Core
 			}
 		}
 
-		[SerializeField] private bool _simulateBundles;
 		[SerializeField] private Loading _core;
 
-		private AssetBundles _bundles;
 		private Configuration _configuration;
 		private List<State> _allStates;
 
 		private State _root;
-		private Dictionary<string, List<Reference>> _implementations;
-
-		private void Awake()
-		{
-			_bundles = new AssetBundles(_simulateBundles);
-			_implementations = new Dictionary<string, List<Reference>>();
-		}
+		private readonly Dictionary<string, List<Reference>> _implementations = new Dictionary<string, List<Reference>>();
 
 		private IEnumerator Start()
 		{
 			yield return LoadImplementation(_core, new Implementation(Constants.CoreBundle, string.Empty));
 
-			yield return _bundles.LoadAsset<Configuration>(
+			yield return AssetBundles.LoadAsset<Configuration>(
 				Constants.GetConfigurationAssetPath(),
 				result => { _configuration = result; },
 				null,
 				FatalError
 			);
 
-			yield return _bundles.LoadAssets<State>(
+			yield return AssetBundles.LoadAssets<State>(
 				Constants.CoreBundle,
 				result => { _allStates = result; },
 				null,
@@ -79,7 +72,7 @@ namespace Fuse.Core
 
 		private void OnDestroy()
 		{
-			_bundles.UnloadAllBundles(true);
+			AssetBundles.UnloadAllBundles(true);
 			Logger.Info("Stopped");
 		}
 
@@ -175,7 +168,7 @@ namespace Fuse.Core
 			switch (loading.Load)
 			{
 				case LoadMethod.Baked:
-					yield return _bundles.LoadBundle
+					yield return AssetBundles.LoadBundle
 					(
 						loading.GetPath(asset),
 						bundle => { OnImplementationLoaded(implementation); },
@@ -184,7 +177,7 @@ namespace Fuse.Core
 					);
 					break;
 				case LoadMethod.Online:
-					yield return _bundles.LoadBundle
+					yield return AssetBundles.LoadBundle
 					(
 						loading.GetUri(asset),
 						loading.Version,
@@ -204,7 +197,7 @@ namespace Fuse.Core
 
 			if (implementation.Type == Constants.CoreBundle)
 			{
-				_bundles.UnloadBundle(implementation.Bundle, false);
+				AssetBundles.UnloadBundle(implementation.Bundle, false);
 				return;
 			}
 
@@ -228,7 +221,7 @@ namespace Fuse.Core
 
 		private IEnumerator SetupImplementation(Implementation implementation)
 		{
-			yield return _bundles.LoadAssets(
+			yield return AssetBundles.LoadAssets(
 				implementation.Bundle,
 				Type.GetType(implementation.Type, true, true),
 				result => { GetReference(implementation).Asset = result[0]; },
@@ -256,7 +249,7 @@ namespace Fuse.Core
 			if (_implementations[implementation.Type].Count == 0)
 			{
 				_implementations.Remove(implementation.Type);
-				_bundles.UnloadBundle(implementation.Bundle, true);
+				AssetBundles.UnloadBundle(implementation.Bundle, true);
 			}
 		}
 	}
