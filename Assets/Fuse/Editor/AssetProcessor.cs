@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections;
+using System.IO;
 using System.Reflection;
 using Fuse.Core;
 using Fuse.Implementation;
 using UnityEditor;
 using UnityEditor.Callbacks;
+using UnityEditorInternal;
 using UnityEngine;
 using Logger = Fuse.Core.Logger;
+using State = Fuse.Core.State;
 
 namespace Fuse.Editor
 {
@@ -15,11 +19,19 @@ namespace Fuse.Editor
 	public class AssetGenerator : AssetPostprocessor
 	{
 		private const string SimulateMenuItem = "Fuse/Assets/Simulate %&m";
+		private const string RootOutput = "Assets/Bundles/bin";
 
 		[MenuItem("Fuse/Configure %&c")]
 		private static void EditConfiguration()
 		{
 			Selection.activeObject = AssetDatabase.LoadAssetAtPath<ScriptableObject>(Constants.GetConfigurationAssetPath());
+		}
+
+		[MenuItem("Fuse/New/State %&s")]
+		public static void ShowCreateStateWindow()
+		{
+			CreateStateWindow window = EditorWindow.GetWindow<CreateStateWindow>();
+			window.OnCreate += CreateStateAsset;
 		}
 
 		[MenuItem(SimulateMenuItem)]
@@ -29,21 +41,70 @@ namespace Fuse.Editor
 		}
 
 		[MenuItem(SimulateMenuItem, true)]
-		public static void ToggleSimulateAssetsValidate()
+		public static bool ToggleSimulateAssetsValidate()
 		{
 			Menu.SetChecked(SimulateMenuItem, AssetBundles.Simulate);
+			return true;
+		}
+
+		[MenuItem("Fuse/Assets/Clear Cache %&d")]
+		public static void ClearAssets()
+		{
+			Caching.ClearCache();
+			Resources.UnloadUnusedAssets();
+			GC.Collect();
 		}
 
 		[MenuItem("Fuse/Assets/Build %&b")]
 		public static void BuildAssets()
 		{
-		}
+			if (!InternalEditorUtility.inBatchMode)
+			{
+				bool result = EditorUtility.DisplayDialog("Build Assets?",
+					"Do you want to build Assets for " + EditorUserBuildSettings.activeBuildTarget + "?", "Yes", "No");
 
-		[MenuItem("Fuse/New/State %&s")]
-		public static void ShowCreateStateWindow()
-		{
-			CreateStateWindow window = EditorWindow.GetWindow<CreateStateWindow>();
-			window.OnCreate += CreateStateAsset;
+				if (!result)
+					return;
+			}
+
+			string outputPath = RootOutput + "/" + EditorUserBuildSettings.activeBuildTarget;
+			EditorUtils.PreparePath(outputPath);
+
+			var manifest = BuildPipeline.BuildAssetBundles(outputPath, BuildAssetBundleOptions.ChunkBasedCompression,
+				EditorUserBuildSettings.activeBuildTarget);
+			if (manifest == null)
+			{
+				if (!InternalEditorUtility.inBatchMode)
+					throw new Exception("Unable to build asset bundles for: " + EditorUserBuildSettings.activeBuildTarget + "!");
+
+				Debug.LogError("Unable to build asset bundles for: " + EditorUserBuildSettings.activeBuildTarget + "!");
+				EditorApplication.Exit(1);
+				return;
+			}
+
+			string platformRoot = RootOutput.Replace('/', Path.DirectorySeparatorChar);
+			string ioOutputPath = platformRoot + Path.DirectorySeparatorChar + EditorUserBuildSettings.activeBuildTarget;
+			DirectoryInfo buildDirectory = new DirectoryInfo(ioOutputPath);
+			string[] bundleNames = AssetDatabase.GetAllAssetBundleNames();
+			FileInfo[] infos = buildDirectory.GetFiles();
+
+			// delete manifests, old asset bundles, and the weird generated file from a Unity issue
+			foreach (FileInfo fileInfo in infos)
+				if (fileInfo.Name.Contains(".unity3d") || fileInfo.Name.Contains(".manifest") ||
+				    fileInfo.Name == buildDirectory.Name)
+					File.Delete(fileInfo.FullName);
+
+			// lastly rename existing ones to proper extension
+			foreach (FileInfo fileInfo in infos)
+				if (((IList) bundleNames).Contains(fileInfo.Name))
+					File.Move(fileInfo.FullName, fileInfo.FullName + ".unity3d");
+
+			Debug.Log("Built assets for: " + EditorUserBuildSettings.activeBuildTarget);
+
+			if (!InternalEditorUtility.inBatchMode)
+				EditorUtility.DisplayDialog("Built Assets",
+					"Assets built to \"Assets/Bundles/bin/" + EditorUserBuildSettings.activeBuildTarget + "\".",
+					"Ok");
 		}
 
 		private static void CreateStateAsset(string name)
