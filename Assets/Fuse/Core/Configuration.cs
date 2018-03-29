@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using Fuse.Implementation;
 using JetBrains.Annotations;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -20,7 +20,28 @@ namespace Fuse.Core
 	public class Configuration : ScriptableObject
 	{
 		[StateReference] public string Start;
-		public Loading LoadImplementations; // TODO: more control over individual implementation / versioning
+		public Loading Core;
+		public Loading Implementations;
+		public CustomVersion[] CustomVersions;
+
+		public string GetAssetPath(Implementation implementation)
+		{
+			return Implementations.GetPath(implementation.Bundle + Constants.BundleExtension);
+		}
+		
+		public Uri GetAssetUri(Implementation implementation)
+		{
+			return Implementations.GetUri(implementation.Bundle + Constants.BundleExtension);
+		}
+		
+		public uint GetAssetVersion(Implementation implementation)
+		{
+			foreach (CustomVersion custom in CustomVersions)
+				if (custom.Implementation == implementation.Type)
+					return custom.Version;
+
+			return Implementations.Version;
+		}
 	}
 
 	public enum LoadMethod
@@ -37,6 +58,15 @@ namespace Fuse.Core
 	}
 
 	[Serializable]
+	public class CustomVersion
+	{
+		[AttributeTypeReference(typeof(ImplementationAttribute))]
+		public string Implementation;
+
+		public uint Version;
+	}
+
+	[Serializable]
 	public class Loading
 	{
 		public LoadMethod Load;
@@ -46,7 +76,7 @@ namespace Fuse.Core
 
 		public string GetPath(string asset)
 		{
-			return Application.streamingAssetsPath + Path.DirectorySeparatorChar + asset;
+			return string.Format(Constants.AssetsBakedPath, asset);
 		}
 
 		public Uri GetUri(string asset)

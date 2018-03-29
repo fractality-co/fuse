@@ -12,8 +12,16 @@ MonoBehaviour:
   m_Name: Configuration
   m_EditorClassIdentifier: 
   Start: 
-  Implementations:
+  Core:
     Load: 0
+    Version: 0
     _host:
       Develop: 
       Release: 
+  Implementations:
+    Load: 0
+    Version: 0
+    _host:
+      Develop: 
+      Release: 
+  Versioning: []

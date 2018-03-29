@@ -1,4 +1,7 @@
-﻿namespace Fuse.Core
+﻿using System.IO;
+using UnityEngine;
+
+namespace Fuse.Core
 {
 	public static class Constants
 	{
@@ -6,8 +9,6 @@
 		public const string StatesAssetPath = CoreAssetPath + "/States";
 		public const string ImplementationAssetPath = "Assets/Bundles/Implementations";
 		public const string ImplementationScriptsPath = "Assets/Scripts";
-		public const string LocalBundleRelativePath = "Bundles";
-		public const string LocalBundleFullPath = "Assets/StreamingAssets/" + LocalBundleRelativePath;
 		public const string EditorBundlePath = "Bundles";
 		public const string DefaultSeparator = "/";
 
@@ -17,6 +18,10 @@
 		public const string CoreBundleFile = CoreBundle + BundleExtension;
 		public const string ImplementationBundle = "{0}";
 		public const string ImplementationBundleFile = ImplementationBundle + BundleExtension;
+
+		public static readonly string AssetsBakedPath =
+			Application.streamingAssetsPath + Path.DirectorySeparatorChar + "Bundles" +
+			Path.DirectorySeparatorChar + "{0}";
 
 		public static string GetConfigurationAssetName()
 		{
