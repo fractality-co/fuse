@@ -13,24 +13,25 @@ namespace Fuse.Core
 	/// <summary>
 	/// Executor for the framework. You should not be interacting with this.
 	/// </summary>
+	[DisallowMultipleComponent]
 	public class Executor : MonoBehaviour
 	{
-		private class Implementation
+		private class Reference
 		{
-			public readonly string Name;
-			public uint References;
+			public readonly Implementation Implementation;
+			public uint Count;
 			public bool Loaded;
 			public bool Setup;
-			public List<Object> Assets;
+			public Object Asset;
 
 			public bool Active
 			{
-				get { return References > 0; }
+				get { return Count > 0; }
 			}
 
-			public Implementation(string name)
+			public Reference(Implementation implementation)
 			{
-				Name = name;
+				Implementation = implementation;
 			}
 		}
 
@@ -43,17 +44,17 @@ namespace Fuse.Core
 		private List<State> _allStates;
 
 		private State _root;
-		private Dictionary<string, Implementation> _implementations;
+		private Dictionary<string, List<Reference>> _implementations;
 
 		private void Awake()
 		{
 			_bundles = new AssetBundles(_simulateBundles);
-			_implementations = new Dictionary<string, Implementation>();
+			_implementations = new Dictionary<string, List<Reference>>();
 		}
 
 		private IEnumerator Start()
 		{
-			yield return LoadImplementation(_core, Constants.CoreBundleFile);
+			yield return LoadImplementation(_core, new Implementation(Constants.CoreBundle, string.Empty));
 
 			yield return _bundles.LoadAsset<Configuration>(
 				Constants.GetConfigurationAssetPath(),
@@ -98,21 +99,24 @@ namespace Fuse.Core
 		{
 			if (_root != null)
 			{
-				foreach (string implementation in GetImplementations(_root))
-					RemoveImplementation(implementation);
+				foreach (Implementation implementation in GetImplementations(_root))
+					RemoveReference(implementation);
 			}
 
 			_root = GetState(stateName);
 
-			foreach (string implementation in GetImplementations(_root))
-				AddImplementation(implementation);
+			foreach (Implementation implementation in GetImplementations(_root))
+				AddReference(implementation);
 
-			foreach (KeyValuePair<string, Implementation> implementation in _implementations)
+			foreach (KeyValuePair<string, List<Reference>> pair in _implementations)
 			{
-				if (!implementation.Value.Active)
-					UnloadImplementation(implementation.Key);
-				else if (!implementation.Value.Loaded)
-					StartCoroutine(LoadImplementation(_configuration.LoadImplementations, implementation.Value.Name));
+				foreach (Reference reference in pair.Value)
+				{
+					if (!reference.Active)
+						UnloadImplementation(reference.Implementation);
+					else if (!reference.Loaded)
+						StartCoroutine(LoadImplementation(_configuration.LoadImplementations, reference.Implementation));
+				}
 			}
 		}
 
@@ -121,39 +125,54 @@ namespace Fuse.Core
 			return _allStates.Find(current => current.name == stateName);
 		}
 
-		private List<string> GetImplementations(State state)
+		private List<Implementation> GetImplementations(State state)
 		{
-			List<string> result = new List<string>();
+			List<Implementation> result = new List<Implementation>();
 
 			while (state != null)
 			{
 				result.AddRange(state.Implementations);
-				state = GetState(state.Parent);
+				state = state.IsRoot ? null : GetState(state.Parent);
 			}
 
 			return result;
 		}
 
-		private void RemoveImplementation(string implementation)
+		private void RemoveReference(Implementation implementation)
 		{
-			_implementations[implementation].References--;
+			GetReference(implementation).Count--;
 		}
 
-		private void AddImplementation(string implementation)
+		private void AddReference(Implementation implementation)
 		{
-			if (!_implementations.ContainsKey(implementation))
-				_implementations[implementation] = new Implementation(implementation);
+			if (!_implementations.ContainsKey(implementation.Type))
+				_implementations[implementation.Type] = new List<Reference>();
 
-			_implementations[implementation].References++;
+			Reference reference = GetReference(implementation);
+			if (reference == null)
+			{
+				reference = new Reference(implementation);
+				_implementations[implementation.Type].Add(reference);
+			}
+
+			reference.Count++;
 		}
 
-		private IEnumerator LoadImplementation(Loading loading, string implementation)
+		private Reference GetReference(Implementation implementation)
 		{
-			Logger.Info("Loading implementation: " + implementation + " ...");
+			if (!_implementations.ContainsKey(implementation.Type))
+				return null;
 
-			_implementations[implementation].Loaded = true;
+			return _implementations[implementation.Type].Find(current => current.Implementation.Name == implementation.Name);
+		}
 
-			string asset = implementation.ToLower().Trim() + Constants.BundleExtension;
+		private IEnumerator LoadImplementation(Loading loading, Implementation implementation)
+		{
+			Logger.Info("Loading implementation: " + implementation.Type + " ...");
+
+			GetReference(implementation).Loaded = true;
+
+			string asset = implementation.Bundle + Constants.BundleExtension;
 			switch (loading.Load)
 			{
 				case LoadMethod.Baked:
@@ -180,54 +199,66 @@ namespace Fuse.Core
 			}
 		}
 
-		private void UnloadImplementation(string implementation)
+		private void UnloadImplementation(Implementation implementation)
 		{
-			StartCoroutine(CleanupImplementation(implementation));
+			Logger.Info("Unloading implementation: " + implementation.Type);
 
-			Logger.Info("Unloaded implementation: " + implementation);
+			if (implementation.Type == Constants.CoreBundle)
+			{
+				_bundles.UnloadBundle(implementation.Bundle, false);
+				return;
+			}
+
+			StartCoroutine(CleanupImplementation(implementation));
 		}
 
-		private void OnImplementationLoaded(string implementation)
+		private void OnImplementationLoaded(Implementation implementation)
 		{
-			Logger.Info("Loaded bundle: " + implementation);
+			Logger.Info("Loading implementation: " + implementation.Type);
 
-			if (implementation == Constants.CoreBundle) return;
+			if (implementation.Type == Constants.CoreBundle) return;
 
-			if (!_implementations[implementation].Setup)
+			if (!GetReference(implementation).Setup)
 				StartCoroutine(SetupImplementation(implementation));
 		}
 
-		private void OnImplementationLoadError(string implementation, string error)
+		private void OnImplementationLoadError(Implementation implementation, string error)
 		{
 			FatalError(implementation + "\n" + error);
 		}
 
-		private IEnumerator SetupImplementation(string implementation)
+		private IEnumerator SetupImplementation(Implementation implementation)
 		{
 			yield return _bundles.LoadAssets(
-				implementation,
-				Type.GetType(implementation, true, true),
-				result => { _implementations[implementation].Assets = result; },
+				implementation.Bundle,
+				Type.GetType(implementation.Type, true, true),
+				result => { GetReference(implementation).Asset = result[0]; },
 				null,
 				FatalError);
 
-			// TODO: implementation vs implementations when loading and assigned to state, how do we solve this?
 			// TODO: inject invocations
 			// TODO: setup invocations
 			// TODO: add pub/sub hooks
 
-			_implementations[implementation].Setup = true;
+			GetReference(implementation).Setup = true;
 		}
 
-		private IEnumerator CleanupImplementation(string implementation)
+		private IEnumerator CleanupImplementation(Implementation implementation)
 		{
-			// TODO: cleanup invocations
 			// TODO: remove pub/sub hooks
+			// TODO: cleanup invocations
 
 			yield return null;
 
-			_implementations.Remove(implementation);
-			_bundles.UnloadBundle(implementation, true);
+			Reference reference = GetReference(implementation);
+			reference.Asset = null;
+
+			_implementations[implementation.Type].Remove(reference);
+			if (_implementations[implementation.Type].Count == 0)
+			{
+				_implementations.Remove(implementation.Type);
+				_bundles.UnloadBundle(implementation.Bundle, true);
+			}
 		}
 	}
 }

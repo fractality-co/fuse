@@ -14,8 +14,7 @@ namespace Fuse.Editor
 	/// </summary>
 	public class ScriptGenerator : AssetPostprocessor
 	{
-		[MenuItem("Window/Fuse/New/Implementation %&i")]
-		[MenuItem("Assets/Fuse/New/Implementation")]
+		[MenuItem("Fuse/New/Implementation %&i")]
 		public static void ShowCreateImplementationWindow()
 		{
 			CreateImplementationWindow window = EditorWindow.GetWindow<CreateImplementationWindow>();

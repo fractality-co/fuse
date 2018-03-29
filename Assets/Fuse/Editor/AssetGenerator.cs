@@ -15,16 +15,14 @@ namespace Fuse.Editor
 	public class AssetGenerator : AssetPostprocessor
 	{
 #if UNITY_EDITOR
-		[MenuItem("Window/Fuse/Configure %&c")]
-		[MenuItem("Assets/Fuse/Configure")]
+		[MenuItem("Fuse/Configure %&c")]
 		private static void EditConfiguration()
 		{
 			Selection.activeObject = AssetDatabase.LoadAssetAtPath<ScriptableObject>(Constants.GetConfigurationAssetPath());
 		}
 #endif
 
-		[MenuItem("Window/Fuse/New/State %&s")]
-		[MenuItem("Assets/Fuse/New/State")]
+		[MenuItem("Fuse/New/State %&s")]
 		public static void ShowCreateStateWindow()
 		{
 			CreateStateWindow window = EditorWindow.GetWindow<CreateStateWindow>();

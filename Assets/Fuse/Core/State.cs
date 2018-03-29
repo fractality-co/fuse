@@ -13,13 +13,37 @@ namespace Fuse.Core
 	/// </summary>
 	public class State : ScriptableObject
 	{
+		public bool IsRoot
+		{
+			get { return string.IsNullOrEmpty(Parent); }
+		}
+
 		[StateReference, Tooltip("Optionally, you can make this state a sub-state to another existing one.")]
 		public string Parent;
 
 		public Transition[] Transitions;
 
+		public Implementation[] Implementations;
+	}
+
+	[Serializable]
+	public class Implementation
+	{
+		public string Bundle
+		{
+			get { return Type.ToLower().Trim(); }
+		}
+
 		[AttributeTypeReference(typeof(ImplementationAttribute))]
-		public string[] Implementations;
+		public string Type;
+
+		public string Name;
+
+		public Implementation(string type, string name)
+		{
+			Type = type;
+			Name = name;
+		}
 	}
 
 	[Serializable]
@@ -53,7 +77,7 @@ namespace Fuse.Core
 			position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
 			AttributeTypeReference reference = (AttributeTypeReference) attribute;
 
-			List<string> options = GetImplementations(reference.BaseType);
+			List<string> options = GetTypes(reference.BaseType);
 			if (options.Count > 0)
 			{
 				EditorGUI.BeginChangeCheck();
@@ -72,7 +96,7 @@ namespace Fuse.Core
 			EditorGUI.EndProperty();
 		}
 
-		private static List<string> GetImplementations(Type attributeType)
+		private static List<string> GetTypes(Type attributeType)
 		{
 			if (_options == null)
 			{
@@ -86,6 +110,52 @@ namespace Fuse.Core
 							_options.Add(type.Name);
 						}
 					}
+				}
+			}
+
+			return _options;
+		}
+	}
+
+	[CustomPropertyDrawer(typeof(Implementation))]
+	internal class ImplementationReferencePropertyDrawer : PropertyDrawer
+	{
+		private static List<string> _options;
+
+		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+		{
+			EditorGUI.BeginProperty(position, GUIContent.none, property);
+
+			position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
+
+			List<string> options = GetImplementations(property.serializedObject.FindProperty("Type").stringValue);
+			if (options.Count > 0)
+			{
+				EditorGUI.BeginChangeCheck();
+
+				int typeIndex = options.IndexOf(property.stringValue);
+				typeIndex = EditorGUI.Popup(position, typeIndex, options.ToArray());
+
+				if (EditorGUI.EndChangeCheck())
+					property.stringValue = options[typeIndex];
+			}
+			else
+			{
+				EditorGUI.Popup(position, 0, new[] {string.Empty});
+			}
+
+			EditorGUI.EndProperty();
+		}
+
+		private static List<string> GetImplementations(string type)
+		{
+			if (_options == null)
+			{
+				_options = new List<string>();
+				foreach (string guid in AssetDatabase.FindAssets(string.Format("t:{0}", type)))
+				{
+					string[] assetPath = AssetDatabase.GUIDToAssetPath(guid).Split('/');
+					_options.Add(assetPath[assetPath.Length - 1]);
 				}
 			}
 
