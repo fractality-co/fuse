@@ -44,7 +44,12 @@ namespace Fuse.Core
 		private State _root;
 		private readonly Dictionary<string, List<Reference>> _implementations = new Dictionary<string, List<Reference>>();
 
-		private IEnumerator Start()
+		private void Awake()
+		{
+			StartCoroutine(LoadCore());
+		}
+
+		private IEnumerator LoadCore()
 		{
 			yield return LoadImplementation(_core, new Implementation(Constants.CoreBundle, string.Empty));
 

@@ -6,6 +6,10 @@
 		public const string StatesAssetPath = CoreAssetPath + "/States";
 		public const string ImplementationAssetPath = "Assets/Bundles/Implementations";
 		public const string ImplementationScriptsPath = "Assets/Scripts";
+		public const string LocalBundleRelativePath = "Bundles";
+		public const string LocalBundleFullPath = "Assets/StreamingAssets/" + LocalBundleRelativePath;
+		public const string EditorBundlePath = "Bundles";
+		public const string DefaultSeparator = "/";
 
 		public const string AssetExtension = ".asset";
 		public const string BundleExtension = ".unity3d";

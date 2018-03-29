@@ -19,7 +19,6 @@ namespace Fuse.Editor
 	public class AssetGenerator : AssetPostprocessor
 	{
 		private const string SimulateMenuItem = "Fuse/Assets/Simulate %&m";
-		private const string RootOutput = "Assets/Bundles/bin";
 
 		[MenuItem("Fuse/Configure %&c")]
 		private static void EditConfiguration()
@@ -67,8 +66,15 @@ namespace Fuse.Editor
 					return;
 			}
 
-			string outputPath = RootOutput + "/" + EditorUserBuildSettings.activeBuildTarget;
-			EditorUtils.PreparePath(outputPath);
+			string outputPath = Constants.EditorBundlePath + Constants.DefaultSeparator +
+			                    EditorUserBuildSettings.activeBuildTarget;
+			outputPath = outputPath.Replace(Constants.DefaultSeparator, Path.DirectorySeparatorChar.ToString());
+
+			if (!Directory.Exists(Constants.EditorBundlePath))
+				Directory.CreateDirectory(Constants.EditorBundlePath);
+
+			if (!Directory.Exists(outputPath))
+				Directory.CreateDirectory(outputPath);
 
 			var manifest = BuildPipeline.BuildAssetBundles(outputPath, BuildAssetBundleOptions.ChunkBasedCompression,
 				EditorUserBuildSettings.activeBuildTarget);
@@ -82,9 +88,7 @@ namespace Fuse.Editor
 				return;
 			}
 
-			string platformRoot = RootOutput.Replace('/', Path.DirectorySeparatorChar);
-			string ioOutputPath = platformRoot + Path.DirectorySeparatorChar + EditorUserBuildSettings.activeBuildTarget;
-			DirectoryInfo buildDirectory = new DirectoryInfo(ioOutputPath);
+			DirectoryInfo buildDirectory = new DirectoryInfo(outputPath);
 			string[] bundleNames = AssetDatabase.GetAllAssetBundleNames();
 			FileInfo[] infos = buildDirectory.GetFiles();
 
@@ -103,7 +107,7 @@ namespace Fuse.Editor
 
 			if (!InternalEditorUtility.inBatchMode)
 				EditorUtility.DisplayDialog("Built Assets",
-					"Assets built to \"Assets/Bundles/bin/" + EditorUserBuildSettings.activeBuildTarget + "\".",
+					"Assets built to\"" + outputPath + "\".",
 					"Ok");
 		}
 
