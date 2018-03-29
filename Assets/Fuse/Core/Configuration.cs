@@ -26,12 +26,6 @@ namespace Fuse.Core
 		Online
 	}
 
-	public enum BuildMode
-	{
-		Develop,
-		Release
-	}
-
 	[Serializable]
 	public class Hosting
 	{
@@ -52,17 +46,13 @@ namespace Fuse.Core
 			return Application.streamingAssetsPath + Path.DirectorySeparatorChar + asset;
 		}
 
-		public Uri GetUri(BuildMode mode, string asset)
+		public Uri GetUri(string asset)
 		{
-			switch (mode)
-			{
-				case BuildMode.Develop:
-					return new Uri(new Uri(_host.Develop), new Uri(asset));
-				case BuildMode.Release:
-					return new Uri(new Uri(_host.Release), new Uri(asset));
-				default:
-					throw new ArgumentOutOfRangeException("mode", mode, null);
-			}
+#if RELEASE
+			return new Uri(new Uri(_host.Release), new Uri(asset));
+#else
+			return new Uri(new Uri(_host.Develop), new Uri(asset));
+#endif
 		}
 	}
 

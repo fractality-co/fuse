@@ -22,6 +22,16 @@ namespace Fuse.Editor
 		}
 #endif
 
+		[MenuItem("Fuse/Assets/Simulate %&m")]
+		public static void ToggleSimulateAssets()
+		{
+		}
+
+		[MenuItem("Fuse/Assets/Build %&b")]
+		public static void BuildAssets()
+		{
+		}
+
 		[MenuItem("Fuse/New/State %&s")]
 		public static void ShowCreateStateWindow()
 		{

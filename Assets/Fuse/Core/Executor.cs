@@ -36,7 +36,6 @@ namespace Fuse.Core
 		}
 
 		[SerializeField] private bool _simulateBundles;
-		[SerializeField] private BuildMode _mode;
 		[SerializeField] private Loading _core;
 
 		private AssetBundles _bundles;
@@ -187,7 +186,7 @@ namespace Fuse.Core
 				case LoadMethod.Online:
 					yield return _bundles.LoadBundle
 					(
-						loading.GetUri(_mode, asset),
+						loading.GetUri(asset),
 						loading.Version,
 						bundle => { OnImplementationLoaded(implementation); },
 						null,
