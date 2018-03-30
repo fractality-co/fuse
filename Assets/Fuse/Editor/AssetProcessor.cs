@@ -185,8 +185,6 @@ namespace Fuse.Editor
 					File.Move(fileInfo.FullName, fileInfo.FullName + ".unity3d");
 
 			Debug.Log("Built assets for: " + EditorUserBuildSettings.activeBuildTarget);
-
-			return;
 		}
 
 		private static string GetAssetIntegration()
