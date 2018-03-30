@@ -19,6 +19,7 @@ namespace Fuse.Core
 		public const string ImplementationBundle = "{0}";
 		public const string ImplementationBundleFile = ImplementationBundle + BundleExtension;
 
+		public const string AssetsBakedEditorPath = "Assets/StreamingAssets/Bundles";
 		public static readonly string AssetsBakedPath =
 			Application.streamingAssetsPath + Path.DirectorySeparatorChar + "Bundles" +
 			Path.DirectorySeparatorChar + "{0}";

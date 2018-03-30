@@ -5,6 +5,7 @@ using System.Reflection;
 using Fuse.Core;
 using Fuse.Implementation;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Callbacks;
 using UnityEditorInternal;
 using UnityEngine;
@@ -16,9 +17,34 @@ namespace Fuse.Editor
 	/// <summary>
 	/// Handles the generation and post-processing of assets for <see cref="Executor"/>.
 	/// </summary>
-	public class AssetGenerator : AssetPostprocessor
+	public class AssetGenerator : AssetPostprocessor, IPreprocessBuild
 	{
 		private const string SimulateMenuItem = "Fuse/Assets/Simulate %&m";
+
+		public int callbackOrder
+		{
+			get { return 0; }
+		}
+
+		public void OnPreprocessBuild(BuildTarget target, string path)
+		{
+			string title = "Preparing Assets";
+			string info = "Hold on while we build and integrate the latest assets for this platform.";
+
+			EditorUtility.DisplayProgressBar(title, info, 0);
+			BuildAssets();
+			EditorUtility.DisplayProgressBar(title, info, 0.5f);
+			IntegrateAssets();
+			EditorUtility.DisplayProgressBar(title, info, 1f);
+			EditorUtility.ClearProgressBar();
+		}
+
+		[PostProcessBuild]
+		private static void OnPostProcess(BuildTarget target, string pathToBuildProject)
+		{
+			if (AssetBundles.Simulate)
+				RemoveIntegratedAssets();
+		}
 
 		[MenuItem("Fuse/Configure %&c")]
 		private static void EditConfiguration()
@@ -36,7 +62,19 @@ namespace Fuse.Editor
 		[MenuItem(SimulateMenuItem)]
 		public static void ToggleSimulateAssets()
 		{
-			AssetBundles.Simulate = !AssetBundles.Simulate;
+			if (AssetBundles.Simulate)
+			{
+				if (!AreAssetsBuilt())
+					BuildAssets();
+
+				IntegrateAssets();
+				AssetBundles.Simulate = false;
+			}
+			else
+			{
+				RemoveIntegratedAssets();
+				AssetBundles.Simulate = true;
+			}
 		}
 
 		[MenuItem(SimulateMenuItem, true)]
@@ -55,20 +93,63 @@ namespace Fuse.Editor
 		}
 
 		[MenuItem("Fuse/Assets/Build %&b")]
-		public static void BuildAssets()
+		public static void StartBuildAssets()
 		{
-			if (!InternalEditorUtility.inBatchMode)
+			BuildAssets();
+
+			if (!AssetBundles.Simulate)
 			{
-				bool result = EditorUtility.DisplayDialog("Build Assets?",
-					"Do you want to build Assets for " + EditorUserBuildSettings.activeBuildTarget + "?", "Yes", "No");
-
-				if (!result)
-					return;
+				IntegrateAssets();
+				EditorUtility.DisplayDialog("Built & Integrated Assets",
+					"Assets integrated into current project, and built to\"" + GetAssetOutput() + "\".", "Ok");
 			}
+			else
+			{
+				EditorUtility.DisplayDialog("Built Assets",
+					"Assets built to\"" + GetAssetOutput() + "\".",
+					"Ok");
+			}
+		}
 
-			string outputPath = Constants.EditorBundlePath + Constants.DefaultSeparator +
-			                    EditorUserBuildSettings.activeBuildTarget;
-			outputPath = outputPath.Replace(Constants.DefaultSeparator, Path.DirectorySeparatorChar.ToString());
+		private static bool AreAssetsBuilt()
+		{
+			return Directory.Exists(GetAssetOutput());
+		}
+
+		private static void IntegrateAssets()
+		{
+			EditorUtils.PreparePath(Constants.AssetsBakedEditorPath);
+
+			Configuration configuration = AssetDatabase.LoadAssetAtPath<Configuration>(Constants.GetConfigurationAssetPath());
+			if (configuration.Implementations.Load == LoadMethod.Baked)
+			{
+				EditorUtils.DirectoryCopy(GetAssetOutput(), GetAssetIntegration(), true);
+			}
+			else
+			{
+				string sourceCorePath = GetAssetOutput() + Path.DirectorySeparatorChar + Constants.CoreBundleFile;
+				string destCorePath = GetAssetIntegration() + Path.DirectorySeparatorChar + Constants.CoreBundleFile;
+				File.Copy(sourceCorePath, destCorePath, true);
+			}
+		}
+
+		private static void RemoveIntegratedAssets()
+		{
+			if (Directory.Exists(GetAssetIntegration()))
+				Directory.Delete(GetAssetIntegration(), true);
+		}
+
+		private static void RemoveAllAssets()
+		{
+			RemoveIntegratedAssets();
+
+			if (Directory.Exists(Constants.EditorBundlePath))
+				Directory.Delete(Constants.EditorBundlePath, true);
+		}
+
+		private static void BuildAssets()
+		{
+			string outputPath = GetAssetOutput();
 
 			if (!Directory.Exists(Constants.EditorBundlePath))
 				Directory.CreateDirectory(Constants.EditorBundlePath);
@@ -105,10 +186,19 @@ namespace Fuse.Editor
 
 			Debug.Log("Built assets for: " + EditorUserBuildSettings.activeBuildTarget);
 
-			if (!InternalEditorUtility.inBatchMode)
-				EditorUtility.DisplayDialog("Built Assets",
-					"Assets built to\"" + outputPath + "\".",
-					"Ok");
+			return;
+		}
+
+		private static string GetAssetIntegration()
+		{
+			return EditorUtils.ConvertPath(Constants.AssetsBakedEditorPath);
+		}
+
+		private static string GetAssetOutput()
+		{
+			return (Constants.EditorBundlePath + Constants.DefaultSeparator +
+			        EditorUserBuildSettings.activeBuildTarget)
+				.Replace(Constants.DefaultSeparator, Path.DirectorySeparatorChar.ToString());
 		}
 
 		private static void CreateStateAsset(string name)
