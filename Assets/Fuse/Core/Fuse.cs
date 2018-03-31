@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
-using UnityEngine;
 using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
@@ -15,7 +14,7 @@ namespace Fuse.Core
 	/// <summary>
 	/// Executor for the framework. You should not be interacting with this.
 	/// </summary>
-	public static class Fuse
+	public class Fuse : SingletonBehaviour<Fuse>
 	{
 		private class ImplementationReference
 		{
@@ -63,34 +62,15 @@ namespace Fuse.Core
 			}
 		}
 
-		public interface IExecutor
+		private Configuration _configuration;
+		private List<State> _allStates;
+		private State _root;
+
+		private List<StateTransition> _transitions;
+		private Dictionary<string, List<ImplementationReference>> _implementations;
+
+		private IEnumerator Start()
 		{
-			Coroutine StartJob(IEnumerator method);
-			void StopJob(Coroutine coroutine);
-			void StopAllJobs();
-		}
-
-		private static Configuration _configuration;
-		private static List<State> _allStates;
-		private static State _root;
-
-		private static IExecutor _executor;
-		private static List<StateTransition> _transitions;
-		private static Dictionary<string, List<ImplementationReference>> _implementations;
-
-		public static bool Running { get; private set; }
-
-		public static void Start(IExecutor executor)
-		{
-			if (Running)
-			{
-				Logger.Warn("Attempting to start " + typeof(Fuse).Name + " but it is running.");
-				return;
-			}
-
-			Running = true;
-
-			_executor = executor;
 			_transitions = new List<StateTransition>();
 			_implementations = new Dictionary<string, List<ImplementationReference>>();
 
@@ -100,33 +80,6 @@ namespace Fuse.Core
 			Logger.Enabled = true;
 #endif
 
-			_executor.StartJob(LoadCore());
-		}
-
-		public static void Stop()
-		{
-			if (!Running)
-			{
-				Logger.Warn("Attempting to stop " + typeof(Fuse).Name + " but it is not running.");
-				return;
-			}
-
-			_executor.StopAllJobs();
-			AssetBundles.UnloadAllBundles(true);
-
-			_executor = null;
-			_transitions = null;
-			_implementations = null;
-			_configuration = null;
-			_allStates = null;
-			_root = null;
-
-			Running = false;
-			Logger.Info("Stopped");
-		}
-
-		private static IEnumerator LoadCore()
-		{
 			Logger.Info("Starting ...");
 
 			string localPath = string.Format(Constants.AssetsBakedPath, Constants.CoreBundleFile);
@@ -170,7 +123,20 @@ namespace Fuse.Core
 			Logger.Info("Started");
 		}
 
-		private static IEnumerator SetState(string state)
+		private void OnApplicationQuit()
+		{
+			AssetBundles.UnloadAllBundles(true);
+
+			_transitions = null;
+			_implementations = null;
+			_configuration = null;
+			_allStates = null;
+			_root = null;
+
+			Logger.Info("Stopped");
+		}
+
+		private IEnumerator SetState(string state)
 		{
 			if (string.IsNullOrEmpty(state))
 			{
@@ -215,14 +181,14 @@ namespace Fuse.Core
 			}
 		}
 
-		private static State GetState(string state)
+		private State GetState(string state)
 		{
 			string[] values = state.Split(Constants.DefaultSeparator);
 			string stateName = values[values.Length - 1].Replace(Constants.AssetExtension, string.Empty);
 			return _allStates.Find(current => current.name == stateName);
 		}
 
-		private static List<Transition> GetTransitions(State state)
+		private List<Transition> GetTransitions(State state)
 		{
 			List<Transition> result = new List<Transition>();
 
@@ -235,7 +201,7 @@ namespace Fuse.Core
 			return result;
 		}
 
-		private static List<Implementation> GetImplementations(State state)
+		private List<Implementation> GetImplementations(State state)
 		{
 			List<Implementation> result = new List<Implementation>();
 
@@ -248,12 +214,12 @@ namespace Fuse.Core
 			return result;
 		}
 
-		private static void RemoveReference(Implementation implementation)
+		private void RemoveReference(Implementation implementation)
 		{
 			GetReference(implementation).Count--;
 		}
 
-		private static void AddReference(Implementation implementation)
+		private void AddReference(Implementation implementation)
 		{
 			if (!_implementations.ContainsKey(implementation.Type))
 				_implementations[implementation.Type] = new List<ImplementationReference>();
@@ -268,7 +234,7 @@ namespace Fuse.Core
 			reference.Count++;
 		}
 
-		private static ImplementationReference GetReference(Implementation implementation)
+		private ImplementationReference GetReference(Implementation implementation)
 		{
 			if (!_implementations.ContainsKey(implementation.Type))
 				return null;
@@ -276,7 +242,7 @@ namespace Fuse.Core
 			return _implementations[implementation.Type].Find(current => current.Implementation.Name == implementation.Name);
 		}
 
-		private static IEnumerator LoadImplementation(Implementation implementation)
+		private IEnumerator LoadImplementation(Implementation implementation)
 		{
 			Logger.Info("Loading implementation: " + implementation.Type + " ...");
 
@@ -308,17 +274,17 @@ namespace Fuse.Core
 			}
 		}
 
-		private static void OnImplementationLoaded(Implementation implementation)
+		private void OnImplementationLoaded(Implementation implementation)
 		{
 			Logger.Info("Loaded implementation: " + implementation.Type);
 		}
 
-		private static void OnImplementationLoadError(Implementation implementation, string error)
+		private void OnImplementationLoadError(Implementation implementation, string error)
 		{
 			Logger.Exception(implementation + "\n" + error);
 		}
 
-		private static IEnumerator SetupImplementation(Implementation implementation)
+		private IEnumerator SetupImplementation(Implementation implementation)
 		{
 			yield return AssetBundles.LoadAssets(
 				implementation.Bundle,
@@ -334,7 +300,7 @@ namespace Fuse.Core
 			GetReference(implementation).Active = true;
 		}
 
-		private static IEnumerator CleanupImplementation(Implementation implementation)
+		private IEnumerator CleanupImplementation(Implementation implementation)
 		{
 			// TODO: remove pub/sub hooks
 			// TODO: cleanup invocations
@@ -352,7 +318,7 @@ namespace Fuse.Core
 			}
 		}
 
-		private static void OnEventPublished(string type)
+		private void OnEventPublished(string type)
 		{
 			// TODO: invoke listeners to this event (subscribers)
 
@@ -360,7 +326,7 @@ namespace Fuse.Core
 			{
 				if (transition.ProcessEvent(type))
 				{
-					_executor.StartJob(SetState(transition.State));
+					StartCoroutine(SetState(transition.State));
 					break;
 				}
 			}
