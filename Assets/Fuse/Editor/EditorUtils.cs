@@ -8,7 +8,7 @@ namespace Fuse.Editor
 	/// </summary>
 	public static class EditorUtils
 	{
-		public static string ConvertPath(string path)
+		public static string SystemPath(string path)
 		{
 			return path.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
 		}
@@ -25,6 +25,15 @@ namespace Fuse.Editor
 					AssetDatabase.CreateFolder(parent, current);
 				parent = next;
 			}
+		}
+
+		public static string SplitJoin(string value, char delimiter, int count)
+		{
+			string result = string.Empty;
+			string[] values = value.Split(delimiter);
+			for (int i = 0; i <= count - 1; i++)
+				result += values[i] + (i <= count - 1 ? delimiter.ToString() : string.Empty);
+			return result;
 		}
 
 		public static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)

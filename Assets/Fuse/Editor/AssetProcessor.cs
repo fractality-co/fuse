@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Fuse.Core;
 using Fuse.Implementation;
@@ -131,14 +132,6 @@ namespace Fuse.Editor
 			}
 		}
 
-		private static void RemoveAllAssets()
-		{
-			RemoveIntegratedAssets();
-
-			if (Directory.Exists(Constants.EditorBundlePath))
-				Directory.Delete(Constants.EditorBundlePath, true);
-		}
-
 		private static void BuildAssets()
 		{
 			string outputPath = GetAssetOutput();
@@ -181,7 +174,7 @@ namespace Fuse.Editor
 
 		private static string GetAssetIntegration()
 		{
-			return EditorUtils.ConvertPath(Constants.AssetsBakedEditorPath);
+			return EditorUtils.SystemPath(Constants.AssetsBakedEditorPath);
 		}
 
 		private static string GetAssetOutput()
@@ -214,11 +207,21 @@ namespace Fuse.Editor
 		[DidReloadScripts]
 		private static void ProcessAssets()
 		{
-			ProcessCore();
-			ProcessImplementations();
+			string title = "Processing Assets";
 
+			EditorUtility.DisplayProgressBar(title, "Processing core", 0);
+			ProcessCore();
+
+			EditorUtility.DisplayProgressBar(title, "Processing implementations", 0.5f);
+			ProcessImplementations();
+			CleanupImplementations();
+
+			EditorUtility.DisplayProgressBar(title, "Saving", 1f);
 			AssetDatabase.RemoveUnusedAssetBundleNames();
 			AssetDatabase.SaveAssets();
+			AssetDatabase.Refresh();
+
+			EditorUtility.ClearProgressBar();
 		}
 
 		private static void ProcessCore()
@@ -247,14 +250,31 @@ namespace Fuse.Editor
 			{
 				foreach (Type type in assembly.GetTypes())
 				{
-					object[] implemenations = type.GetCustomAttributes(typeof(ImplementationAttribute), true);
-					if (implemenations.Length > 0)
-						SyncImplementation(type, implemenations[0] as ImplementationAttribute);
+					if (type.GetCustomAttributes(typeof(ImplementationAttribute), true).Length > 0)
+						SyncImplementation(type);
 				}
 			}
 		}
 
-		private static void SyncImplementation(Type type, ImplementationAttribute implementation)
+		private static void CleanupImplementations()
+		{
+			foreach (string guid in AssetDatabase.FindAssets("t:Object"))
+			{
+				string path = AssetDatabase.GUIDToAssetPath(guid);
+				if (path.Contains(Constants.ImplementationAssetPath) && path.Contains(Constants.AssetExtension))
+				{
+					ScriptableObject reference = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+					if (reference == null)
+					{
+						int pathCount = Constants.ImplementationAssetPath.Count(current => current == Constants.DefaultSeparator);
+						string rootPath = EditorUtils.SplitJoin(path, Constants.DefaultSeparator, pathCount + 1);
+						Directory.Delete(EditorUtils.SystemPath(rootPath), true);
+					}
+				}
+			}
+		}
+
+		private static void SyncImplementation(Type type)
 		{
 			string path = Constants.ImplementationAssetPath + "/" + type.Name;
 			if (!AssetDatabase.IsValidFolder(path))
@@ -268,7 +288,8 @@ namespace Fuse.Editor
 					asset = ScriptableObject.CreateInstance(type);
 					asset.name = assetName;
 					AssetDatabase.CreateAsset(asset, assetPath);
-					Logger.Info("Created implementation: " + assetName + " [" + implementation + "]");
+					
+					Logger.Info("Created implementation: " + assetName);
 				}
 			}
 

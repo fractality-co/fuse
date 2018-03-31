@@ -14,12 +14,13 @@ namespace Fuse.Core
 
 		public const string AssetExtension = ".asset";
 		public const string BundleExtension = ".unity3d";
-		public const string CoreBundle = "fuse-core";
+		public const string CoreBundle = "core";
 		public const string CoreBundleFile = CoreBundle + BundleExtension;
 		public const string ImplementationBundle = "{0}";
 		public const string ImplementationBundleFile = ImplementationBundle + BundleExtension;
 
 		public const string AssetsBakedEditorPath = "Assets/StreamingAssets/Bundles";
+
 		public static readonly string AssetsBakedPath =
 			Application.streamingAssetsPath + Path.DirectorySeparatorChar + "Bundles" +
 			Path.DirectorySeparatorChar + "{0}";
