@@ -5,10 +5,6 @@ using System.Linq;
 using JetBrains.Annotations;
 using Object = UnityEngine.Object;
 
-#if UNITY_EDITOR
-
-#endif
-
 namespace Fuse.Core
 {
 	/// <summary>
@@ -16,52 +12,6 @@ namespace Fuse.Core
 	/// </summary>
 	public class Fuse : SingletonBehaviour<Fuse>
 	{
-		private class ImplementationReference
-		{
-			public readonly Implementation Implementation;
-			public uint Count;
-			public bool Loaded;
-			public bool Active;
-			[UsedImplicitly] public Object Asset;
-
-			public bool Referenced
-			{
-				get { return Count > 0; }
-			}
-
-			public ImplementationReference(Implementation implementation)
-			{
-				Implementation = implementation;
-			}
-		}
-
-		private class StateTransition
-		{
-			private readonly List<string> _events;
-
-			public string State { get; private set; }
-
-			public bool Transition
-			{
-				get { return _events.Count == 0; }
-			}
-
-			public StateTransition(Transition transition)
-			{
-				State = transition.To;
-				_events = transition.Events.ToList();
-			}
-
-			public bool ProcessEvent(string type)
-			{
-				int index = _events.IndexOf(type);
-				if (index >= 0)
-					_events.RemoveAt(index);
-
-				return Transition;
-			}
-		}
-
 		private Configuration _configuration;
 		private List<State> _allStates;
 		private State _root;
@@ -329,6 +279,52 @@ namespace Fuse.Core
 					StartCoroutine(SetState(transition.State));
 					break;
 				}
+			}
+		}
+
+		private class ImplementationReference
+		{
+			public readonly Implementation Implementation;
+			public uint Count;
+			public bool Loaded;
+			public bool Active;
+			[UsedImplicitly] public Object Asset;
+
+			public bool Referenced
+			{
+				get { return Count > 0; }
+			}
+
+			public ImplementationReference(Implementation implementation)
+			{
+				Implementation = implementation;
+			}
+		}
+
+		private class StateTransition
+		{
+			private readonly List<string> _events;
+
+			public string State { get; private set; }
+
+			public bool Transition
+			{
+				get { return _events.Count == 0; }
+			}
+
+			public StateTransition(Transition transition)
+			{
+				State = transition.To;
+				_events = transition.Events.ToList();
+			}
+
+			public bool ProcessEvent(string type)
+			{
+				int index = _events.IndexOf(type);
+				if (index >= 0)
+					_events.RemoveAt(index);
+
+				return Transition;
 			}
 		}
 	}

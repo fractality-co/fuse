@@ -123,10 +123,8 @@ namespace Fuse.Editor
 			string name = type.Name.Replace(typeof(Attribute).Name, string.Empty);
 
 			string param = string.Empty;
-			if (type == typeof(SubscribeAttribute) || type == typeof(PublishAttribute))
+			if (type == typeof(SubscribeAttribute))
 				param = "(\"EventType\")";
-			else if (type == typeof(TickAttribute))
-				param = "(1000)";
 
 			return new[]
 			{
@@ -188,23 +186,17 @@ namespace Fuse.Editor
 		public Action<string, List<Type>> OnCreate;
 
 		private string Name { get; set; }
-		private Dictionary<Type, bool> LifecycleImplements { get; set; }
-		private Dictionary<Type, bool> EventsImplements { get; set; }
+		private Dictionary<Type, bool> Implements { get; set; }
 
-		private static readonly Type[] LifecycleAttributes =
+		private static readonly Type[] Attributes =
 		{
-			typeof(SetupAttribute),
-			typeof(CleanupAttribute)
-		};
-
-		private static readonly Type[] EventsAttributes =
-		{
-			typeof(TickAttribute),
+			typeof(InvokeAttribute),
+			typeof(CoroutineAttribute),
+			typeof(ThreadAttribute),
 			typeof(SubscribeAttribute)
 		};
 
-		private bool _showLifecycle = true;
-		private bool _showEvents = true;
+		private bool _showImplements = true;
 
 		public CreateImplementationWindow()
 		{
@@ -213,13 +205,9 @@ namespace Fuse.Editor
 			maxSize = new Vector2(minSize.x, 500);
 			Name = "";
 
-			LifecycleImplements = new Dictionary<Type, bool>();
-			foreach (var type in LifecycleAttributes)
-				LifecycleImplements[type] = true;
-
-			EventsImplements = new Dictionary<Type, bool>();
-			foreach (var type in EventsAttributes)
-				EventsImplements[type] = false;
+			Implements = new Dictionary<Type, bool>();
+			foreach (var type in Attributes)
+				Implements[type] = false;
 		}
 
 		private void OnGUI()
@@ -231,22 +219,14 @@ namespace Fuse.Editor
 
 			GUILayout.Space(10);
 
-			_showLifecycle = EditorGUILayout.Foldout(_showLifecycle, "Lifecycle");
-			if (_showLifecycle)
+			_showImplements = EditorGUILayout.Foldout(_showImplements, "Implements");
+			if (_showImplements)
 			{
-				foreach (var type in LifecycleAttributes)
-					LifecycleImplements[type] = GUILayout.Toggle(LifecycleImplements[type],
+				foreach (var type in Attributes)
+					Implements[type] = GUILayout.Toggle(Implements[type],
 						type.Name.Replace("Attribute", string.Empty));
 
 				GUILayout.Space(5);
-			}
-
-			_showEvents = EditorGUILayout.Foldout(_showEvents, "Events");
-			if (_showEvents)
-			{
-				foreach (var type in EventsAttributes)
-					EventsImplements[type] = GUILayout.Toggle(EventsImplements[type],
-						type.Name.Replace("Attribute", string.Empty));
 			}
 
 			GUILayout.Space(10);
@@ -258,16 +238,13 @@ namespace Fuse.Editor
 			if (GUILayout.Button("Create"))
 			{
 				List<Type> implements = new List<Type>();
-				foreach (KeyValuePair<Type, bool> lifecycle in LifecycleImplements)
+				foreach (KeyValuePair<Type, bool> lifecycle in Implements)
 					if (lifecycle.Value)
 						implements.Add(lifecycle.Key);
 
-				foreach (KeyValuePair<Type, bool> events in EventsImplements)
-					if (events.Value)
-						implements.Add(events.Key);
-
 				if (OnCreate != null)
 					OnCreate(Name, implements);
+
 				Close();
 			}
 
