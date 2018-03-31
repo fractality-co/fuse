@@ -15,7 +15,7 @@ using State = Fuse.Core.State;
 namespace Fuse.Editor
 {
 	/// <summary>
-	/// Handles the generation and post-processing of assets for <see cref="Executor"/>.
+	/// Handles the generation and post-processing of assets for <see cref="Fuse"/>.
 	/// </summary>
 	public class AssetGenerator : AssetPostprocessor, IPreprocessBuild
 	{

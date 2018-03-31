@@ -13,7 +13,7 @@ namespace Fuse.Core
 {
 	/// <summary>
 	/// Each state operates as a state machine and a state.
-	/// Data defined here controls how <see cref="Executor"/> should handle implementations.
+	/// Data defined here controls how <see cref="Fuse"/> should handle implementations.
 	/// </summary>
 	public class State : ScriptableObject
 	{

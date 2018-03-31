@@ -10,7 +10,7 @@ using Logger = Fuse.Core.Logger;
 namespace Fuse.Editor
 {
 	/// <summary>
-	/// Handles the generation and post-processing of scripts for <see cref="Executor"/>.
+	/// Handles the generation and post-processing of scripts for <see cref="Fuse"/>.
 	/// </summary>
 	public class ScriptProcessor : AssetPostprocessor
 	{

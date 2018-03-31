@@ -15,18 +15,17 @@ namespace Fuse.Core
 	/// <summary>
 	/// Executor for the framework. You should not be interacting with this.
 	/// </summary>
-	[DisallowMultipleComponent]
-	public class Executor : MonoBehaviour
+	public static class Fuse
 	{
 		private class ImplementationReference
 		{
 			public readonly Implementation Implementation;
 			public uint Count;
 			public bool Loaded;
-			public bool Setup;
+			public bool Active;
 			[UsedImplicitly] public Object Asset;
 
-			public bool Active
+			public bool Referenced
 			{
 				get { return Count > 0; }
 			}
@@ -64,27 +63,69 @@ namespace Fuse.Core
 			}
 		}
 
-		private Configuration _configuration;
-		private List<State> _allStates;
-		private State _root;
-
-		private readonly List<StateTransition> _transitions = new List<StateTransition>();
-
-		private readonly Dictionary<string, List<ImplementationReference>> _implementations =
-			new Dictionary<string, List<ImplementationReference>>();
-
-		private void Awake()
+		public interface IExecutor
 		{
+			Coroutine StartJob(IEnumerator method);
+			void StopJob(Coroutine coroutine);
+			void StopAllJobs();
+		}
+
+		private static Configuration _configuration;
+		private static List<State> _allStates;
+		private static State _root;
+
+		private static IExecutor _executor;
+		private static List<StateTransition> _transitions;
+		private static Dictionary<string, List<ImplementationReference>> _implementations;
+
+		public static bool Running { get; private set; }
+
+		public static void Start(IExecutor executor)
+		{
+			if (Running)
+			{
+				Logger.Warn("Attempting to start " + typeof(Fuse).Name + " but it is running.");
+				return;
+			}
+
+			Running = true;
+
+			_executor = executor;
+			_transitions = new List<StateTransition>();
+			_implementations = new Dictionary<string, List<ImplementationReference>>();
+
 #if RELEASE
 			Logger.Enabled = false;
 #else
 			Logger.Enabled = true;
 #endif
 
-			StartCoroutine(LoadCore());
+			_executor.StartJob(LoadCore());
 		}
 
-		private IEnumerator LoadCore()
+		public static void Stop()
+		{
+			if (!Running)
+			{
+				Logger.Warn("Attempting to stop " + typeof(Fuse).Name + " but it is not running.");
+				return;
+			}
+
+			_executor.StopAllJobs();
+			AssetBundles.UnloadAllBundles(true);
+
+			_executor = null;
+			_transitions = null;
+			_implementations = null;
+			_configuration = null;
+			_allStates = null;
+			_root = null;
+
+			Running = false;
+			Logger.Info("Stopped");
+		}
+
+		private static IEnumerator LoadCore()
 		{
 			Logger.Info("Starting ...");
 
@@ -129,19 +170,7 @@ namespace Fuse.Core
 			Logger.Info("Started");
 		}
 
-		private void OnApplicationQuit()
-		{
-			Logger.Info("Application quitting; immediately stopping");
-			DestroyImmediate(gameObject);
-		}
-
-		private void OnDestroy()
-		{
-			AssetBundles.UnloadAllBundles(true);
-			Logger.Info("Stopped");
-		}
-
-		private IEnumerator SetState(string state)
+		private static IEnumerator SetState(string state)
 		{
 			if (string.IsNullOrEmpty(state))
 			{
@@ -167,33 +196,33 @@ namespace Fuse.Core
 			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
 			{
 				foreach (ImplementationReference reference in pair.Value)
-					if (!reference.Active)
+					if (!reference.Referenced)
 						yield return CleanupImplementation(reference.Implementation);
 			}
 
 			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
 			{
 				foreach (ImplementationReference reference in pair.Value)
-					if (reference.Active && !reference.Loaded)
+					if (reference.Referenced && !reference.Loaded)
 						yield return LoadImplementation(reference.Implementation);
 			}
 
 			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
 			{
 				foreach (ImplementationReference reference in pair.Value)
-					if (reference.Active && reference.Loaded && !reference.Setup)
+					if (reference.Referenced && reference.Loaded && !reference.Active)
 						yield return SetupImplementation(reference.Implementation);
 			}
 		}
 
-		private State GetState(string state)
+		private static State GetState(string state)
 		{
 			string[] values = state.Split(Constants.DefaultSeparator);
 			string stateName = values[values.Length - 1].Replace(Constants.AssetExtension, string.Empty);
 			return _allStates.Find(current => current.name == stateName);
 		}
 
-		private List<Transition> GetTransitions(State state)
+		private static List<Transition> GetTransitions(State state)
 		{
 			List<Transition> result = new List<Transition>();
 
@@ -206,7 +235,7 @@ namespace Fuse.Core
 			return result;
 		}
 
-		private List<Implementation> GetImplementations(State state)
+		private static List<Implementation> GetImplementations(State state)
 		{
 			List<Implementation> result = new List<Implementation>();
 
@@ -219,12 +248,12 @@ namespace Fuse.Core
 			return result;
 		}
 
-		private void RemoveReference(Implementation implementation)
+		private static void RemoveReference(Implementation implementation)
 		{
 			GetReference(implementation).Count--;
 		}
 
-		private void AddReference(Implementation implementation)
+		private static void AddReference(Implementation implementation)
 		{
 			if (!_implementations.ContainsKey(implementation.Type))
 				_implementations[implementation.Type] = new List<ImplementationReference>();
@@ -239,7 +268,7 @@ namespace Fuse.Core
 			reference.Count++;
 		}
 
-		private ImplementationReference GetReference(Implementation implementation)
+		private static ImplementationReference GetReference(Implementation implementation)
 		{
 			if (!_implementations.ContainsKey(implementation.Type))
 				return null;
@@ -247,7 +276,7 @@ namespace Fuse.Core
 			return _implementations[implementation.Type].Find(current => current.Implementation.Name == implementation.Name);
 		}
 
-		private IEnumerator LoadImplementation(Implementation implementation)
+		private static IEnumerator LoadImplementation(Implementation implementation)
 		{
 			Logger.Info("Loading implementation: " + implementation.Type + " ...");
 
@@ -279,17 +308,17 @@ namespace Fuse.Core
 			}
 		}
 
-		private void OnImplementationLoaded(Implementation implementation)
+		private static void OnImplementationLoaded(Implementation implementation)
 		{
 			Logger.Info("Loaded implementation: " + implementation.Type);
 		}
 
-		private void OnImplementationLoadError(Implementation implementation, string error)
+		private static void OnImplementationLoadError(Implementation implementation, string error)
 		{
 			Logger.Exception(implementation + "\n" + error);
 		}
 
-		private IEnumerator SetupImplementation(Implementation implementation)
+		private static IEnumerator SetupImplementation(Implementation implementation)
 		{
 			yield return AssetBundles.LoadAssets(
 				implementation.Bundle,
@@ -302,10 +331,10 @@ namespace Fuse.Core
 			// TODO: setup invocations
 			// TODO: add pub/sub hooks
 
-			GetReference(implementation).Setup = true;
+			GetReference(implementation).Active = true;
 		}
 
-		private IEnumerator CleanupImplementation(Implementation implementation)
+		private static IEnumerator CleanupImplementation(Implementation implementation)
 		{
 			// TODO: remove pub/sub hooks
 			// TODO: cleanup invocations
@@ -323,7 +352,7 @@ namespace Fuse.Core
 			}
 		}
 
-		private void OnEventPublished(string type)
+		private static void OnEventPublished(string type)
 		{
 			// TODO: invoke listeners to this event (subscribers)
 
@@ -331,7 +360,7 @@ namespace Fuse.Core
 			{
 				if (transition.ProcessEvent(type))
 				{
-					StartCoroutine(SetState(transition.State));
+					_executor.StartJob(SetState(transition.State));
 					break;
 				}
 			}

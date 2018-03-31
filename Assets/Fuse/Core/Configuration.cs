@@ -15,7 +15,7 @@ using UnityEditor;
 namespace Fuse.Core
 {
 	/// <summary>
-	/// Data relating to your applications functionality then executed by <see cref="Executor"/>.
+	/// Data relating to your applications functionality then executed by <see cref="Fuse"/>.
 	/// </summary>
 	public class Configuration : ScriptableObject
 	{
