@@ -5,8 +5,8 @@ using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
 using Object = UnityEngine.Object;
+
 #if UNITY_EDITOR
-using UnityEditor;
 
 #endif
 
@@ -75,43 +75,58 @@ namespace Fuse.Core
 
 		private void Awake()
 		{
+#if RELEASE
+			Logger.Enabled = false;
+#else
+			Logger.Enabled = true;
+#endif
+
 			StartCoroutine(LoadCore());
 		}
 
 		private IEnumerator LoadCore()
 		{
+			Logger.Info("Starting ...");
+
 			string localPath = string.Format(Constants.AssetsBakedPath, Constants.CoreBundleFile);
-			yield return AssetBundles.LoadBundle(localPath, null, null, FatalError);
+			yield return AssetBundles.LoadBundle(localPath, null, null, Logger.Exception);
 
 			yield return AssetBundles.LoadAsset<Configuration>(
 				Constants.GetConfigurationAssetPath(),
 				result => { _configuration = result; },
 				null,
-				FatalError
+				Logger.Exception
 			);
+
+			Logger.Info("Loaded core");
 
 			if (_configuration.Core.Load == LoadMethod.Online)
 			{
 				yield return AssetBundles.UnloadBundle(Constants.CoreBundle, false);
 
 				yield return AssetBundles.LoadBundle(_configuration.Core.GetUri(Constants.CoreBundleFile),
-					_configuration.Core.Version, null, null, FatalError);
+					_configuration.Core.Version, null, null, Logger.Exception);
 
 				yield return AssetBundles.LoadAsset<Configuration>(
 					Constants.GetConfigurationAssetPath(),
 					result => { _configuration = result; },
 					null,
-					FatalError
+					Logger.Exception
 				);
+
+				Logger.Info("Updated core from remote source");
 			}
 
 			yield return AssetBundles.LoadAssets<State>(
 				Constants.CoreBundle,
 				result => { _allStates = result; },
 				null,
-				FatalError);
+				Logger.Exception);
+
 
 			yield return SetState(_configuration.Start);
+
+			Logger.Info("Started");
 		}
 
 		private void OnApplicationQuit()
@@ -126,26 +141,21 @@ namespace Fuse.Core
 			Logger.Info("Stopped");
 		}
 
-		private static void FatalError(string message)
+		private IEnumerator SetState(string state)
 		{
-			Logger.Error("Encountered a fatal error!\n" + message);
+			if (string.IsNullOrEmpty(state))
+			{
+				Logger.Exception("You must have a valid initial state set in your " + typeof(Configuration).Name);
+				yield break;
+			}
 
-#if UNITY_EDITOR
-			EditorApplication.isPaused = true;
-#else
-			Application.Quit();
-#endif
-		}
-
-		private IEnumerator SetState(string stateName)
-		{
 			if (_root != null)
 			{
 				foreach (Implementation implementation in GetImplementations(_root))
 					RemoveReference(implementation);
 			}
 
-			_root = GetState(stateName);
+			_root = GetState(state);
 
 			_transitions.Clear();
 			foreach (Transition transition in GetTransitions(_root))
@@ -176,8 +186,10 @@ namespace Fuse.Core
 			}
 		}
 
-		private State GetState(string stateName)
+		private State GetState(string state)
 		{
+			string[] values = state.Split(Constants.DefaultSeparator);
+			string stateName = values[values.Length - 1].Replace(Constants.AssetExtension, string.Empty);
 			return _allStates.Find(current => current.name == stateName);
 		}
 
@@ -200,7 +212,7 @@ namespace Fuse.Core
 
 			while (state != null)
 			{
-				result.AddRange(state.Implementations);
+				result.AddRange(state.Implementations.Select(implementationPath => new Implementation(implementationPath)));
 				state = state.IsRoot ? null : GetState(state.Parent);
 			}
 
@@ -274,7 +286,7 @@ namespace Fuse.Core
 
 		private void OnImplementationLoadError(Implementation implementation, string error)
 		{
-			FatalError(implementation + "\n" + error);
+			Logger.Exception(implementation + "\n" + error);
 		}
 
 		private IEnumerator SetupImplementation(Implementation implementation)
@@ -284,7 +296,7 @@ namespace Fuse.Core
 				Type.GetType(implementation.Type, true, true),
 				result => { GetReference(implementation).Asset = result[0]; },
 				null,
-				FatalError);
+				Logger.Exception);
 
 			// TODO: inject invocations
 			// TODO: setup invocations

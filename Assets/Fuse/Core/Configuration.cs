@@ -19,7 +19,7 @@ namespace Fuse.Core
 	/// </summary>
 	public class Configuration : ScriptableObject
 	{
-		[StateReference] public string Start;
+		[AssetReference(typeof(State))] public string Start;
 		public Loading Core;
 		public Loading Implementations;
 		public CustomVersion[] CustomVersions;
@@ -28,12 +28,12 @@ namespace Fuse.Core
 		{
 			return Implementations.GetPath(implementation.Bundle + Constants.BundleExtension);
 		}
-		
+
 		public Uri GetAssetUri(Implementation implementation)
 		{
 			return Implementations.GetUri(implementation.Bundle + Constants.BundleExtension);
 		}
-		
+
 		public uint GetAssetVersion(Implementation implementation)
 		{
 			foreach (CustomVersion custom in CustomVersions)
@@ -104,7 +104,7 @@ namespace Fuse.Core
 			position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
 
 			List<string> options = GetStates();
-			options = options.FindAll(current => !string.IsNullOrEmpty(current)); // currate the list
+			options.Add(State.None);
 
 			if (options.Count > 0)
 			{
@@ -114,7 +114,10 @@ namespace Fuse.Core
 				index = EditorGUI.Popup(position, index, options.ToArray());
 
 				if (EditorGUI.EndChangeCheck())
-					property.stringValue = options[index];
+				{
+					string value = options[index];
+					property.stringValue = string.IsNullOrEmpty(value) ? State.None : value;
+				}
 			}
 			else
 			{

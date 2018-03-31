@@ -54,8 +54,7 @@ namespace Fuse.Editor
 
 		private static string GetNamespaceName()
 		{
-			// ReSharper disable once PossibleNullReferenceException
-			return typeof(ScriptProcessor).Namespace.Replace(".Editor", string.Empty);
+			return typeof(ImplementationAttribute).Namespace;
 		}
 
 		private static string GetImplementationType<T>() where T : ImplementationAttribute

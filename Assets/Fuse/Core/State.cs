@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Fuse.Implementation;
 using UnityEngine;
+using Object = UnityEngine.Object;
 #if UNITY_EDITOR
 using UnityEditor;
 
@@ -16,17 +17,19 @@ namespace Fuse.Core
 	/// </summary>
 	public class State : ScriptableObject
 	{
+		public const string None = "None";
+
 		public bool IsRoot
 		{
 			get { return string.IsNullOrEmpty(Parent); }
 		}
 
-		[StateReference, Tooltip("Optionally, you can make this state a sub-state to another existing one.")]
-		public string Parent;
+		[AssetReference(typeof(State))] public string Parent;
 
 		public Transition[] Transitions;
 
-		public Implementation[] Implementations;
+		[AssetReference(typeof(ScriptableObject), typeof(ImplementationAttribute))]
+		public string[] Implementations;
 	}
 
 	[Serializable]
@@ -47,12 +50,19 @@ namespace Fuse.Core
 			Type = type;
 			Name = name;
 		}
+
+		public Implementation(string path)
+		{
+			string[] parts = path.Split(Constants.DefaultSeparator);
+			Name = parts[parts.Length - 1].Replace(Constants.AssetExtension, string.Empty);
+			Type = parts[parts.Length - 2];
+		}
 	}
 
 	[Serializable]
 	public class Transition
 	{
-		[StateReference] public string To;
+		[AssetReference(typeof(State))] public string To;
 
 		public string[] Events;
 	}
@@ -67,7 +77,55 @@ namespace Fuse.Core
 		}
 	}
 
+	public sealed class AssetReference : PropertyAttribute
+	{
+		public readonly Type Type;
+		public readonly Type RequiredAttribute;
+
+		public AssetReference(Type type, Type requiredAttribute = null)
+		{
+			Type = type;
+			RequiredAttribute = requiredAttribute;
+		}
+	}
+
 #if UNITY_EDITOR
+	[CustomPropertyDrawer(typeof(AssetReference))]
+	public class AssetReferencePropertyDrawer : PropertyDrawer
+	{
+		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+		{
+			position = EditorGUI.PrefixLabel(position, label);
+
+			AssetReference reference = (AssetReference) attribute;
+
+			if (!reference.Type.IsSubclassOf(typeof(Object)))
+			{
+				EditorGUI.LabelField(position, "Invalid assigned type on AssetReference.");
+				return;
+			}
+
+			string assetPath = property.stringValue;
+			Object asset = null;
+			if (!string.IsNullOrEmpty(assetPath))
+				asset = AssetDatabase.LoadAssetAtPath(assetPath, reference.Type);
+
+			EditorGUI.BeginChangeCheck();
+			asset = EditorGUI.ObjectField(position, asset, reference.Type, false);
+			if (EditorGUI.EndChangeCheck())
+			{
+				if (reference.RequiredAttribute != null &&
+				    asset.GetType().GetCustomAttributes(reference.RequiredAttribute, true).Length == 0)
+				{
+					Logger.Warn("Invalid assignment. Requires a attribute of: " + reference.RequiredAttribute);
+					return;
+				}
+
+				property.stringValue = AssetDatabase.GetAssetPath(asset);
+			}
+		}
+	}
+
 	[CustomPropertyDrawer(typeof(AttributeTypeReference))]
 	internal class TypeReferencePropertyDrawer : PropertyDrawer
 	{
@@ -113,52 +171,6 @@ namespace Fuse.Core
 							_options.Add(type.Name);
 						}
 					}
-				}
-			}
-
-			return _options;
-		}
-	}
-
-	[CustomPropertyDrawer(typeof(Implementation))]
-	internal class ImplementationReferencePropertyDrawer : PropertyDrawer
-	{
-		private static List<string> _options;
-
-		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-		{
-			EditorGUI.BeginProperty(position, GUIContent.none, property);
-
-			position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
-
-			List<string> options = GetImplementations(property.serializedObject.FindProperty("Type").stringValue);
-			if (options.Count > 0)
-			{
-				EditorGUI.BeginChangeCheck();
-
-				int typeIndex = options.IndexOf(property.stringValue);
-				typeIndex = EditorGUI.Popup(position, typeIndex, options.ToArray());
-
-				if (EditorGUI.EndChangeCheck())
-					property.stringValue = options[typeIndex];
-			}
-			else
-			{
-				EditorGUI.Popup(position, 0, new[] {string.Empty});
-			}
-
-			EditorGUI.EndProperty();
-		}
-
-		private static List<string> GetImplementations(string type)
-		{
-			if (_options == null)
-			{
-				_options = new List<string>();
-				foreach (string guid in AssetDatabase.FindAssets(string.Format("t:{0}", type)))
-				{
-					string[] assetPath = AssetDatabase.GUIDToAssetPath(guid).Split('/');
-					_options.Add(assetPath[assetPath.Length - 1]);
 				}
 			}
 

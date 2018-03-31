@@ -28,22 +28,8 @@ namespace Fuse.Editor
 
 		public void OnPreprocessBuild(BuildTarget target, string path)
 		{
-			string title = "Preparing Assets";
-			string info = "Hold on while we build and integrate the latest assets for this platform.";
-
-			EditorUtility.DisplayProgressBar(title, info, 0);
-			BuildAssets();
-			EditorUtility.DisplayProgressBar(title, info, 0.5f);
-			IntegrateAssets();
-			EditorUtility.DisplayProgressBar(title, info, 1f);
-			EditorUtility.ClearProgressBar();
-		}
-
-		[PostProcessBuild]
-		private static void OnPostProcess(BuildTarget target, string pathToBuildProject)
-		{
 			if (AssetBundles.Simulate)
-				RemoveIntegratedAssets();
+				Logger.Exception("You can not make a build while in asset simulation mode.");
 		}
 
 		[MenuItem("Fuse/Configure %&c")]
@@ -74,6 +60,10 @@ namespace Fuse.Editor
 			{
 				RemoveIntegratedAssets();
 				AssetBundles.Simulate = true;
+
+				EditorUtility.DisplayDialog("Simulation Mode",
+					"Integrated assets removed, you are now in simulation mode.",
+					"Ok");
 			}
 		}
 
@@ -98,17 +88,11 @@ namespace Fuse.Editor
 			BuildAssets();
 
 			if (!AssetBundles.Simulate)
-			{
 				IntegrateAssets();
-				EditorUtility.DisplayDialog("Built & Integrated Assets",
-					"Assets integrated into current project, and built to\"" + GetAssetOutput() + "\".", "Ok");
-			}
 			else
-			{
 				EditorUtility.DisplayDialog("Built Assets",
-					"Assets built to\"" + GetAssetOutput() + "\".",
+					"Assets built to \"" + GetAssetOutput() + "\".",
 					"Ok");
-			}
 		}
 
 		private static bool AreAssetsBuilt()
@@ -131,12 +115,20 @@ namespace Fuse.Editor
 				string destCorePath = GetAssetIntegration() + Path.DirectorySeparatorChar + Constants.CoreBundleFile;
 				File.Copy(sourceCorePath, destCorePath, true);
 			}
+
+			AssetDatabase.Refresh();
+
+			EditorUtility.DisplayDialog("Integrated Assets",
+				"Assets integrated into current project, and built to \"" + GetAssetOutput() + "\".", "Ok");
 		}
 
 		private static void RemoveIntegratedAssets()
 		{
 			if (Directory.Exists(GetAssetIntegration()))
+			{
 				Directory.Delete(GetAssetIntegration(), true);
+				AssetDatabase.Refresh();
+			}
 		}
 
 		private static void RemoveAllAssets()
@@ -196,7 +188,7 @@ namespace Fuse.Editor
 		{
 			return (Constants.EditorBundlePath + Constants.DefaultSeparator +
 			        EditorUserBuildSettings.activeBuildTarget)
-				.Replace(Constants.DefaultSeparator, Path.DirectorySeparatorChar.ToString());
+				.Replace(Constants.DefaultSeparator, Path.DirectorySeparatorChar);
 		}
 
 		private static void CreateStateAsset(string name)

@@ -10,7 +10,7 @@ namespace Fuse.Core
 		public const string ImplementationAssetPath = "Assets/Bundles/Implementations";
 		public const string ImplementationScriptsPath = "Assets/Scripts";
 		public const string EditorBundlePath = "Bundles";
-		public const string DefaultSeparator = "/";
+		public const char DefaultSeparator = '/';
 
 		public const string AssetExtension = ".asset";
 		public const string BundleExtension = ".unity3d";
