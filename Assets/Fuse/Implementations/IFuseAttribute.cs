@@ -45,6 +45,7 @@ namespace Fuse.Implementation
 	[DefaultValue(Active)]
 	public enum Lifecycle
 	{
+		None,
 		Load,
 		Setup,
 		Active,

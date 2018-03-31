@@ -24,7 +24,8 @@ namespace Fuse.Core
 			get { return string.IsNullOrEmpty(Parent); }
 		}
 
-		[AssetReference(typeof(State))] public string Parent;
+		[AssetReference(typeof(State))]
+		public string Parent;
 
 		public Transition[] Transitions;
 
@@ -35,6 +36,11 @@ namespace Fuse.Core
 	[Serializable]
 	public class Implementation
 	{
+		public string BundleFile
+		{
+			get { return Bundle + Constants.BundleExtension; }
+		}
+
 		public string Bundle
 		{
 			get { return Type.ToLower().Trim(); }
@@ -62,7 +68,8 @@ namespace Fuse.Core
 	[Serializable]
 	public class Transition
 	{
-		[AssetReference(typeof(State))] public string To;
+		[AssetReference(typeof(State))]
+		public string To;
 
 		public string[] Events;
 	}

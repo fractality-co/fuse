@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using JetBrains.Annotations;
+using Fuse.Implementation;
 using Object = UnityEngine.Object;
 
 namespace Fuse.Core
@@ -112,22 +112,13 @@ namespace Fuse.Core
 			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
 			{
 				foreach (ImplementationReference reference in pair.Value)
-					if (!reference.Referenced)
-						yield return CleanupImplementation(reference.Implementation);
+					if (!reference.Referenced) yield return CleanupImplementation(reference);
 			}
 
 			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
 			{
 				foreach (ImplementationReference reference in pair.Value)
-					if (reference.Referenced && !reference.Loaded)
-						yield return LoadImplementation(reference.Implementation);
-			}
-
-			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
-			{
-				foreach (ImplementationReference reference in pair.Value)
-					if (reference.Referenced && reference.Loaded && !reference.Active)
-						yield return SetupImplementation(reference.Implementation);
+					if (!reference.Running) yield return SetupImplementation(reference);
 			}
 		}
 
@@ -166,7 +157,7 @@ namespace Fuse.Core
 
 		private void RemoveReference(Implementation implementation)
 		{
-			GetReference(implementation).Count--;
+			GetReference(implementation).RemoveReference();
 		}
 
 		private void AddReference(Implementation implementation)
@@ -177,11 +168,11 @@ namespace Fuse.Core
 			ImplementationReference reference = GetReference(implementation);
 			if (reference == null)
 			{
-				reference = new ImplementationReference(implementation);
+				reference = new ImplementationReference(implementation, _configuration, OnEventPublished);
 				_implementations[implementation.Type].Add(reference);
 			}
 
-			reference.Count++;
+			reference.AddReference();
 		}
 
 		private ImplementationReference GetReference(Implementation implementation)
@@ -189,89 +180,28 @@ namespace Fuse.Core
 			if (!_implementations.ContainsKey(implementation.Type))
 				return null;
 
-			return _implementations[implementation.Type].Find(current => current.Implementation.Name == implementation.Name);
+			return _implementations[implementation.Type].Find(current => current.Name == implementation.Name);
 		}
 
-		private IEnumerator LoadImplementation(Implementation implementation)
+		private IEnumerator SetupImplementation(ImplementationReference reference)
 		{
-			Logger.Info("Loading implementation: " + implementation.Type + " ...");
-
-			GetReference(implementation).Loaded = true;
-
-			switch (_configuration.Implementations.Load)
-			{
-				case LoadMethod.Baked:
-					yield return AssetBundles.LoadBundle
-					(
-						_configuration.GetAssetPath(implementation),
-						bundle => { OnImplementationLoaded(implementation); },
-						null,
-						error => { OnImplementationLoadError(implementation, error); }
-					);
-					break;
-				case LoadMethod.Online:
-					yield return AssetBundles.LoadBundle
-					(
-						_configuration.GetAssetUri(implementation),
-						_configuration.GetAssetVersion(implementation),
-						bundle => { OnImplementationLoaded(implementation); },
-						null,
-						error => { OnImplementationLoadError(implementation, error); }
-					);
-					break;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
+			yield return reference.SetLifecycle(Lifecycle.Load);
+			yield return reference.SetLifecycle(Lifecycle.Setup);
+			yield return reference.SetLifecycle(Lifecycle.Active);
 		}
 
-		private void OnImplementationLoaded(Implementation implementation)
+		private IEnumerator CleanupImplementation(ImplementationReference reference)
 		{
-			Logger.Info("Loaded implementation: " + implementation.Type);
-		}
+			yield return reference.SetLifecycle(Lifecycle.Cleanup);
+			yield return reference.SetLifecycle(Lifecycle.Unload);
 
-		private void OnImplementationLoadError(Implementation implementation, string error)
-		{
-			Logger.Exception(implementation + "\n" + error);
-		}
-
-		private IEnumerator SetupImplementation(Implementation implementation)
-		{
-			yield return AssetBundles.LoadAssets(
-				implementation.Bundle,
-				Type.GetType(implementation.Type, true, true),
-				result => { GetReference(implementation).Asset = result[0]; },
-				null,
-				Logger.Exception);
-
-			// TODO: inject invocations
-			// TODO: setup invocations
-			// TODO: add pub/sub hooks
-
-			GetReference(implementation).Active = true;
-		}
-
-		private IEnumerator CleanupImplementation(Implementation implementation)
-		{
-			// TODO: remove pub/sub hooks
-			// TODO: cleanup invocations
-
-			yield return null;
-
-			ImplementationReference reference = GetReference(implementation);
-			reference.Asset = null;
-
-			_implementations[implementation.Type].Remove(reference);
-			if (_implementations[implementation.Type].Count == 0)
-			{
-				_implementations.Remove(implementation.Type);
-				AssetBundles.UnloadBundle(implementation.Bundle, true);
-			}
+			_implementations[reference.Type].Remove(reference);
+			if (_implementations[reference.Type].Count == 0)
+				_implementations.Remove(reference.Type);
 		}
 
 		private void OnEventPublished(string type)
 		{
-			// TODO: invoke listeners to this event (subscribers)
-
 			foreach (StateTransition transition in _transitions)
 			{
 				if (transition.ProcessEvent(type))
@@ -284,20 +214,114 @@ namespace Fuse.Core
 
 		private class ImplementationReference
 		{
-			public readonly Implementation Implementation;
-			public uint Count;
-			public bool Loaded;
-			public bool Active;
-			[UsedImplicitly] public Object Asset;
+			public uint Count { get; private set; }
 
 			public bool Referenced
 			{
 				get { return Count > 0; }
 			}
 
-			public ImplementationReference(Implementation implementation)
+			public string Type
 			{
-				Implementation = implementation;
+				get { return _implementation.Type; }
+			}
+
+			public string Name
+			{
+				get { return _implementation.Name; }
+			}
+
+			public bool Running
+			{
+				get { return Lifecycle != Lifecycle.None; }
+			}
+
+			public Lifecycle Lifecycle { get; private set; }
+
+			private Object _asset;
+			private readonly Action<string> _notify;
+			private readonly Implementation _implementation;
+			private readonly Configuration _config;
+
+			public ImplementationReference(Implementation implementation, Configuration config, Action<string> notify)
+			{
+				_config = config;
+				_notify = notify;
+				_implementation = implementation;
+			}
+
+			public void AddReference()
+			{
+				Count++;
+			}
+
+			public void RemoveReference()
+			{
+				Count--;
+			}
+
+			public IEnumerator SetLifecycle(Lifecycle lifecycle)
+			{
+				// TODO: process all IFuseLifecycle
+				
+				Lifecycle = lifecycle;
+
+				switch (Lifecycle)
+				{
+					case Lifecycle.Load:
+						yield return Load();
+						break;
+					case Lifecycle.Setup:
+						// TODO: add notifier hook for all IFuseNotifier
+						break;
+					case Lifecycle.Cleanup:
+						// TODO: remove notifier hook for all IFuseNotifier
+						break;
+					case Lifecycle.Unload:
+						AssetBundles.UnloadBundle(_implementation.Bundle, true);
+						break;
+				}
+
+				yield return ProcessAttributes();
+			}
+
+			private IEnumerator Load()
+			{
+				switch (_config.Implementations.Load)
+				{
+					case LoadMethod.Baked:
+						yield return AssetBundles.LoadBundle
+						(
+							_config.GetAssetPath(_implementation),
+							null,
+							null,
+							Logger.Exception
+						);
+						break;
+					case LoadMethod.Online:
+						yield return AssetBundles.LoadBundle
+						(
+							_config.GetAssetUri(_implementation),
+							_config.GetAssetVersion(_implementation),
+							null,
+							null,
+							Logger.Exception
+						);
+						break;
+				}
+
+				yield return AssetBundles.LoadAssets(
+					_implementation.Bundle,
+					System.Type.GetType(_implementation.Type, true, true),
+					result => { _asset = result[0]; },
+					null,
+					Logger.Exception);
+			}
+
+			private IEnumerator ProcessAttributes()
+			{
+				// TODO: process lifecycle for this implementation
+				throw new NotImplementedException();
 			}
 		}
 

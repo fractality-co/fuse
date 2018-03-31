@@ -16,8 +16,17 @@ namespace Fuse.Implementation
 	public sealed class InjectAttribute : Attribute, IFuseInjection<PropertyInfo>, IFuseInjection<FieldInfo>,
 		IFuseInjection<MethodInfo>
 	{
-		public uint Order { get; [UsedImplicitly] private set; }
-		public Lifecycle Lifecycle { get; [UsedImplicitly] private set; }
+		public uint Order
+		{
+			get;
+			[UsedImplicitly]
+			private set;
+		}
+
+		public Lifecycle Lifecycle
+		{
+			get { return Lifecycle.Load; }
+		}
 
 		private readonly Regex _regex;
 
