@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.ComponentModel;
 using System.Reflection;
 
@@ -30,6 +31,12 @@ namespace Fuse.Implementation
 	{
 		void OnEnter(T target, object instance);
 		void OnExit(T target, object instance);
+	}
+
+	public interface IFuseNotifier
+	{
+		void AddListener(Action<string> callback);
+		void RemoveListener(Action<string> callback);
 	}
 
 	/// <summary>

@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using Fuse.Core;
 using JetBrains.Annotations;
 
 namespace Fuse.Implementation
@@ -10,7 +13,7 @@ namespace Fuse.Implementation
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Event)]
-	public sealed class PublishAttribute : Attribute, IFuseLifecycle<EventInfo>
+	public sealed class PublishAttribute : PublishSubscribeAttribute, IFuseLifecycle<EventInfo>
 	{
 		public uint Order
 		{
@@ -22,21 +25,22 @@ namespace Fuse.Implementation
 			get { return Lifecycle.Active; }
 		}
 
-		public readonly string Type;
-
-		public PublishAttribute(string type)
+		public PublishAttribute(Enum type) : base(type.ToString())
 		{
-			Type = type;
+		}
+
+		public PublishAttribute(string type) : base(type)
+		{
 		}
 
 		public void OnEnter(EventInfo target, object instance)
 		{
-			throw new NotImplementedException();
+			target.AddEventHandler(instance, Notify);
 		}
 
 		public void OnExit(EventInfo target, object instance)
 		{
-			throw new NotImplementedException();
+			target.RemoveEventHandler(instance, Notify);
 		}
 	}
 
@@ -45,8 +49,9 @@ namespace Fuse.Implementation
 	/// Events are only processed while in the Active phase of the <see cref="Lifecycle"/>.
 	/// </summary>
 	[MeansImplicitUse]
-	[AttributeUsage(AttributeTargets.Method)]
-	public sealed class SubscribeAttribute : Attribute, IFuseLifecycle<MethodInfo>
+	[AttributeUsage(AttributeTargets.Method | AttributeTargets.Event)]
+	public sealed class SubscribeAttribute : PublishSubscribeAttribute, IFuseLifecycle<MethodInfo>,
+		IFuseLifecycle<EventInfo>
 	{
 		public uint Order
 		{
@@ -58,21 +63,88 @@ namespace Fuse.Implementation
 			get { return Lifecycle.Active; }
 		}
 
-		public readonly string Type;
+		private Pair<MethodInfo, object> _reference;
 
-		public SubscribeAttribute(string type)
+		public SubscribeAttribute(Enum type) : base(type.ToString())
 		{
-			Type = type;
+		}
+
+		public SubscribeAttribute(string type) : base(type)
+		{
 		}
 
 		public void OnEnter(MethodInfo target, object instance)
 		{
-			throw new NotImplementedException();
+			_reference = AddListener(target, instance);
 		}
 
 		public void OnExit(MethodInfo target, object instance)
 		{
-			throw new NotImplementedException();
+			RemoveListener(_reference);
+			_reference = null;
+		}
+
+		public void OnEnter(EventInfo target, object instance)
+		{
+			OnEnter(target.GetRaiseMethod(), instance);
+		}
+
+		public void OnExit(EventInfo target, object instance)
+		{
+			OnExit(target.GetRaiseMethod(), instance);
+		}
+	}
+
+	[ComVisible(false)]
+	public abstract class PublishSubscribeAttribute : Attribute, IFuseNotifier
+	{
+		protected static readonly Handler Notify = NotifyListeners;
+
+		private static readonly List<Action<string>> StateListeners = new List<Action<string>>();
+
+		private static readonly Dictionary<string, List<Pair<MethodInfo, object>>> Listeners =
+			new Dictionary<string, List<Pair<MethodInfo, object>>>();
+
+		protected delegate void Handler(string type);
+
+		private readonly string _type;
+
+		protected PublishSubscribeAttribute(string type)
+		{
+			_type = type;
+
+			if (!Listeners.ContainsKey(_type))
+				Listeners.Add(_type, new List<Pair<MethodInfo, object>>());
+		}
+
+		protected Pair<MethodInfo, object> AddListener(MethodInfo target, object instance)
+		{
+			Pair<MethodInfo, object> reference = new Pair<MethodInfo, object>(target, instance);
+			Listeners[_type].Add(reference);
+			return reference;
+		}
+
+		protected void RemoveListener(Pair<MethodInfo, object> reference)
+		{
+			Listeners[_type].Remove(reference);
+		}
+
+		private static void NotifyListeners(string type)
+		{
+			foreach (Pair<MethodInfo, object> reference in Listeners[type])
+				reference.A.Invoke(reference.B, null);
+
+			StateListeners.ForEach(callback => callback(type));
+		}
+
+		public void AddListener(Action<string> callback)
+		{
+			StateListeners.Add(callback);
+		}
+
+		public void RemoveListener(Action<string> callback)
+		{
+			StateListeners.Remove(callback);
 		}
 	}
 }
