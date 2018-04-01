@@ -11,6 +11,12 @@ namespace Fuse.Implementation
 		Lifecycle Lifecycle { get; }
 	}
 
+	public interface IFuseNotifier
+	{
+		void AddListener(Action<string> callback);
+		void RemoveListener(Action<string> callback);
+	}
+
 	/// <summary>
 	/// <see cref="Fuse"/> will process all attributes that implement this interface.
 	/// </summary>
@@ -31,12 +37,6 @@ namespace Fuse.Implementation
 	{
 		void OnEnter(T target, object instance);
 		void OnExit(T target, object instance);
-	}
-
-	public interface IFuseNotifier
-	{
-		void AddListener(Action<string> callback);
-		void RemoveListener(Action<string> callback);
 	}
 
 	/// <summary>

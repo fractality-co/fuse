@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using Fuse.Implementation;
 using Object = UnityEngine.Object;
 
@@ -112,13 +114,15 @@ namespace Fuse.Core
 			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
 			{
 				foreach (ImplementationReference reference in pair.Value)
-					if (!reference.Referenced) yield return CleanupImplementation(reference);
+					if (!reference.Referenced)
+						yield return CleanupImplementation(reference);
 			}
 
 			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
 			{
 				foreach (ImplementationReference reference in pair.Value)
-					if (!reference.Running) yield return SetupImplementation(reference);
+					if (!reference.Running)
+						yield return SetupImplementation(reference);
 			}
 		}
 
@@ -168,7 +172,7 @@ namespace Fuse.Core
 			ImplementationReference reference = GetReference(implementation);
 			if (reference == null)
 			{
-				reference = new ImplementationReference(implementation, _configuration, OnEventPublished);
+				reference = new ImplementationReference(implementation, _configuration, OnEventPublished, StartAsync);
 				_implementations[implementation.Type].Add(reference);
 			}
 
@@ -212,6 +216,11 @@ namespace Fuse.Core
 			}
 		}
 
+		private void StartAsync(IEnumerator routine)
+		{
+			StartCoroutine(routine);
+		}
+
 		private class ImplementationReference
 		{
 			public uint Count { get; private set; }
@@ -240,11 +249,14 @@ namespace Fuse.Core
 
 			private Object _asset;
 			private readonly Action<string> _notify;
+			private readonly Action<IEnumerator> _async;
 			private readonly Implementation _implementation;
 			private readonly Configuration _config;
 
-			public ImplementationReference(Implementation implementation, Configuration config, Action<string> notify)
+			public ImplementationReference(Implementation implementation, Configuration config, Action<string> notify,
+				Action<IEnumerator> async)
 			{
+				_async = async;
 				_config = config;
 				_notify = notify;
 				_implementation = implementation;
@@ -262,27 +274,27 @@ namespace Fuse.Core
 
 			public IEnumerator SetLifecycle(Lifecycle lifecycle)
 			{
-				// TODO: process all IFuseLifecycle
-				
-				Lifecycle = lifecycle;
-
-				switch (Lifecycle)
+				switch (lifecycle)
 				{
 					case Lifecycle.Load:
 						yield return Load();
+						ProcessListeners(true);
+						ProcessInjections(lifecycle, Lifecycle);
 						break;
 					case Lifecycle.Setup:
-						// TODO: add notifier hook for all IFuseNotifier
+						ProcessInjections(lifecycle, Lifecycle);
 						break;
 					case Lifecycle.Cleanup:
-						// TODO: remove notifier hook for all IFuseNotifier
+						ProcessInjections(lifecycle, Lifecycle);
 						break;
 					case Lifecycle.Unload:
+						ProcessInjections(lifecycle, Lifecycle);
+						ProcessListeners(false);
 						AssetBundles.UnloadBundle(_implementation.Bundle, true);
 						break;
 				}
 
-				yield return ProcessAttributes();
+				Lifecycle = lifecycle;
 			}
 
 			private IEnumerator Load()
@@ -318,10 +330,108 @@ namespace Fuse.Core
 					Logger.Exception);
 			}
 
-			private IEnumerator ProcessAttributes()
+			private void ProcessListeners(bool active)
 			{
-				// TODO: process lifecycle for this implementation
-				throw new NotImplementedException();
+				foreach (MemberInfo member in _asset.GetType().GetMembers())
+				{
+					foreach (IFuseNotifier notifier in member.GetCustomAttributes(typeof(IFuseNotifier), true))
+					{
+						if (active)
+							notifier.AddListener(_notify);
+						else
+							notifier.RemoveListener(_notify);
+					}
+				}
+			}
+
+			private void ProcessInjections(Lifecycle toEnter, Lifecycle toExit)
+			{
+				List<Pair<IFuseAttribute, MemberInfo>> attributes = new List<Pair<IFuseAttribute, MemberInfo>>();
+				foreach (MemberInfo member in _asset.GetType().GetMembers())
+				{
+					foreach (object custom in member.GetCustomAttributes(typeof(IFuseAttribute), true))
+						attributes.Add(new Pair<IFuseAttribute, MemberInfo>((IFuseAttribute) custom, member));
+				}
+
+				attributes.Sort((a, b) => a.A.Order < b.A.Order ? -1 : 1);
+
+				foreach (Pair<IFuseAttribute, MemberInfo> attribute in attributes)
+				{
+					// we have a custom default value
+					Lifecycle active = attribute.A.Lifecycle;
+					if (active == Lifecycle.None)
+						active = (Lifecycle)((DefaultValueAttribute)active.GetType().GetCustomAttributes(true)[0]).Value;
+						
+					if (IsSubclassOfRawGeneric(typeof(IFuseInjection<>), attribute.A.GetType()))
+					{
+						if (toEnter == active)
+							continue;
+
+						if (attribute.A is IFuseInjection<MethodInfo>)
+							((IFuseInjection<MethodInfo>) attribute.A).Process(attribute.B as MethodInfo, _asset);
+						else if (attribute.A is IFuseInjection<PropertyInfo>)
+							((IFuseInjection<PropertyInfo>) attribute.A).Process(attribute.B as PropertyInfo, _asset);
+						else if (attribute.A is IFuseInjection<FieldInfo>)
+							((IFuseInjection<FieldInfo>) attribute.A).Process(attribute.B as FieldInfo, _asset);
+						else if (attribute.A is IFuseInjection<EventInfo>)
+							((IFuseInjection<EventInfo>) attribute.A).Process(attribute.B as EventInfo, _asset);
+					}
+					else if (IsSubclassOfRawGeneric(typeof(IFuseInjectionAsync<>), attribute.A.GetType()))
+					{
+						if (toEnter == active)
+							continue;
+
+						if (attribute.A is IFuseInjectionAsync<MethodInfo>)
+							_async(((IFuseInjectionAsync<MethodInfo>) attribute.A).Process(attribute.B as MethodInfo, _asset));
+						else if (attribute.A is IFuseInjectionAsync<PropertyInfo>)
+							_async(((IFuseInjectionAsync<PropertyInfo>) attribute.A).Process(attribute.B as PropertyInfo, _asset));
+						else if (attribute.A is IFuseInjectionAsync<FieldInfo>)
+							_async(((IFuseInjectionAsync<FieldInfo>) attribute.A).Process(attribute.B as FieldInfo, _asset));
+						else if (attribute.A is IFuseInjectionAsync<EventInfo>)
+							_async(((IFuseInjectionAsync<EventInfo>) attribute.A).Process(attribute.B as EventInfo, _asset));
+					}
+					else if (IsSubclassOfRawGeneric(typeof(IFuseLifecycle<>), attribute.A.GetType()))
+					{
+						if (toEnter == active)
+						{
+							if (attribute.A is IFuseLifecycle<MethodInfo>)
+								((IFuseLifecycle<MethodInfo>) attribute.A).OnEnter(attribute.B as MethodInfo, _asset);
+							else if (attribute.A is IFuseLifecycle<PropertyInfo>)
+								((IFuseLifecycle<PropertyInfo>) attribute.A).OnEnter(attribute.B as PropertyInfo, _asset);
+							else if (attribute.A is IFuseLifecycle<FieldInfo>)
+								((IFuseLifecycle<FieldInfo>) attribute.A).OnEnter(attribute.B as FieldInfo, _asset);
+							else if (attribute.A is IFuseLifecycle<EventInfo>)
+								((IFuseLifecycle<EventInfo>) attribute.A).OnEnter(attribute.B as EventInfo, _asset);
+						}
+						else if (toExit == active)
+						{
+							if (attribute.A is IFuseLifecycle<MethodInfo>)
+								((IFuseLifecycle<MethodInfo>) attribute.A).OnExit(attribute.B as MethodInfo, _asset);
+							else if (attribute.A is IFuseLifecycle<PropertyInfo>)
+								((IFuseLifecycle<PropertyInfo>) attribute.A).OnExit(attribute.B as PropertyInfo, _asset);
+							else if (attribute.A is IFuseLifecycle<FieldInfo>)
+								((IFuseLifecycle<FieldInfo>) attribute.A).OnExit(attribute.B as FieldInfo, _asset);
+							else if (attribute.A is IFuseLifecycle<EventInfo>)
+								((IFuseLifecycle<EventInfo>) attribute.A).OnExit(attribute.B as EventInfo, _asset);
+						}
+					}
+				}
+			}
+
+			private static bool IsSubclassOfRawGeneric(Type generic, Type toCheck)
+			{
+				while (toCheck != null && toCheck != typeof(object))
+				{
+					var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
+					if (generic == cur)
+					{
+						return true;
+					}
+
+					toCheck = toCheck.BaseType;
+				}
+
+				return false;
 			}
 		}
 
@@ -330,11 +440,6 @@ namespace Fuse.Core
 			private readonly List<string> _events;
 
 			public string State { get; private set; }
-
-			public bool Transition
-			{
-				get { return _events.Count == 0; }
-			}
 
 			public StateTransition(Transition transition)
 			{
@@ -347,8 +452,7 @@ namespace Fuse.Core
 				int index = _events.IndexOf(type);
 				if (index >= 0)
 					_events.RemoveAt(index);
-
-				return Transition;
+				return _events.Count == 0;
 			}
 		}
 	}
