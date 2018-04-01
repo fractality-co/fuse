@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
 using Fuse.Implementation;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -17,8 +17,6 @@ namespace Fuse.Core
 	/// </summary>
 	public class State : ScriptableObject
 	{
-		public const string None = "None";
-
 		public bool IsRoot
 		{
 			get { return string.IsNullOrEmpty(Parent); }
@@ -46,10 +44,8 @@ namespace Fuse.Core
 			get { return Type.ToLower().Trim(); }
 		}
 
-		[AttributeTypeReference(typeof(ImplementationAttribute))]
-		public string Type;
-
-		public string Name;
+		public readonly string Type;
+		public readonly string Name;
 
 		public Implementation(string type, string name)
 		{
@@ -74,14 +70,8 @@ namespace Fuse.Core
 		public string[] Events;
 	}
 
-	public sealed class AttributeTypeReference : PropertyAttribute
+	public sealed class AssetBundleReference : PropertyAttribute
 	{
-		public readonly Type BaseType;
-
-		public AttributeTypeReference(Type baseType)
-		{
-			BaseType = baseType;
-		}
 	}
 
 	public sealed class AssetReference : PropertyAttribute
@@ -133,8 +123,8 @@ namespace Fuse.Core
 		}
 	}
 
-	[CustomPropertyDrawer(typeof(AttributeTypeReference))]
-	internal class TypeReferencePropertyDrawer : PropertyDrawer
+	[CustomPropertyDrawer(typeof(AssetBundleReference))]
+	internal class AssetBundleReferencePropertyDrawer : PropertyDrawer
 	{
 		private static List<string> _options;
 
@@ -143,9 +133,8 @@ namespace Fuse.Core
 			EditorGUI.BeginProperty(position, GUIContent.none, property);
 
 			position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
-			AttributeTypeReference reference = (AttributeTypeReference) attribute;
 
-			List<string> options = GetTypes(reference.BaseType);
+			List<string> options = AssetDatabase.GetAllAssetBundleNames().ToList();
 			if (options.Count > 0)
 			{
 				EditorGUI.BeginChangeCheck();
@@ -162,26 +151,6 @@ namespace Fuse.Core
 			}
 
 			EditorGUI.EndProperty();
-		}
-
-		private static List<string> GetTypes(Type attributeType)
-		{
-			if (_options == null)
-			{
-				_options = new List<string>();
-				foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-				{
-					foreach (Type type in assembly.GetTypes())
-					{
-						if (!type.IsAbstract && type.GetCustomAttributes(attributeType, true).Length > 0)
-						{
-							_options.Add(type.Name);
-						}
-					}
-				}
-			}
-
-			return _options;
 		}
 	}
 #endif

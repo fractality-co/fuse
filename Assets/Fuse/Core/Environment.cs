@@ -1,5 +1,4 @@
 ﻿using System;
-using Fuse.Implementation;
 using JetBrains.Annotations;
 using UnityEngine;
 
@@ -25,7 +24,7 @@ namespace Fuse.Core
 		public uint GetVersion(Implementation implementation)
 		{
 			foreach (CustomVersion custom in CustomVersion)
-				if (custom.Implementation == implementation.Type)
+				if (custom.Bundle == implementation.Bundle)
 					return custom.Version;
 
 			return DefaultVersion;
@@ -35,8 +34,8 @@ namespace Fuse.Core
 	[Serializable]
 	public class CustomVersion
 	{
-		[AttributeTypeReference(typeof(ImplementationAttribute))]
-		public string Implementation;
+		[AssetBundleReference]
+		public string Bundle;
 
 		[UsedImplicitly]
 		public uint Version;
