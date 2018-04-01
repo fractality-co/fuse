@@ -47,7 +47,7 @@ namespace Fuse.Editor
 			window.Setup("State");
 			window.OnCreate += CreateStateAsset;
 		}
-		
+
 		[MenuItem("Fuse/New/Environment %&e")]
 		public static void ShowCreateEnvironmentWindow()
 		{
@@ -215,7 +215,7 @@ namespace Fuse.Editor
 
 			Logger.Info("Created new " + typeof(State).Name + ": " + state.name);
 		}
-		
+
 		private static void CreateEnvironmentAsset(string name)
 		{
 			string path = Constants.EnvironmentsAssetPath + "/" + name + ".asset";
@@ -266,12 +266,22 @@ namespace Fuse.Editor
 			if (importer != null)
 				importer.SetAssetBundleNameAndVariant(Constants.CoreBundle, string.Empty);
 
-			ScriptableObject asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(Constants.GetConfigurationAssetPath());
-			if (asset == null)
+			Configuration config = AssetDatabase.LoadAssetAtPath<Configuration>(Constants.GetConfigurationAssetPath());
+			if (config == null)
 			{
-				asset = ScriptableObject.CreateInstance<Configuration>();
-				asset.name = Constants.GetConfigurationAssetName();
-				AssetDatabase.CreateAsset(asset, Constants.GetConfigurationAssetPath());
+				const string envDefaultName = "Default";
+				CreateEnvironmentAsset(envDefaultName);
+
+				const string stateDefaultName = "Start";
+				CreateStateAsset(stateDefaultName);
+
+				config = ScriptableObject.CreateInstance<Configuration>();
+				config.name = Constants.GetConfigurationAssetName();
+				config.Environment = Constants.EnvironmentsAssetPath + Constants.DefaultSeparator + envDefaultName +
+				                     Constants.AssetExtension;
+				config.Start = Constants.StatesAssetPath + Constants.DefaultSeparator + stateDefaultName +
+				                     Constants.AssetExtension;
+				AssetDatabase.CreateAsset(config, Constants.GetConfigurationAssetPath());
 			}
 		}
 
