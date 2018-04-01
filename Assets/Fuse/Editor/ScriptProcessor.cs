@@ -14,37 +14,6 @@ namespace Fuse.Editor
 	/// </summary>
 	public class ScriptProcessor : AssetPostprocessor
 	{
-		private const string DevelopMenuItem = "Fuse/Mode/Develop %&d";
-		private const string ReleaseMenuItem = "Fuse/Mode/Release %&r";
-		private const string ReleaseDefine = "RELEASE";
-
-		private static bool ReleaseMode
-		{
-			get { return EditorUserBuildSettings.selectedBuildTargetGroup.HasScriptingDefine(ReleaseDefine); }
-		}
-
-		[MenuItem(DevelopMenuItem)]
-		public static void SetDevelopMode()
-		{
-			if (EditorUserBuildSettings.selectedBuildTargetGroup.HasScriptingDefine(ReleaseDefine))
-				EditorUserBuildSettings.selectedBuildTargetGroup.RemoveScriptingDefine(ReleaseDefine);
-		}
-
-		[MenuItem(ReleaseMenuItem)]
-		public static void SetReleaseMode()
-		{
-			if (!EditorUserBuildSettings.selectedBuildTargetGroup.HasScriptingDefine(ReleaseDefine))
-				EditorUserBuildSettings.selectedBuildTargetGroup.AddScriptingDefine(ReleaseDefine);
-		}
-
-		[MenuItem(ReleaseMenuItem, true)]
-		public static bool SetReleaseModeValidate()
-		{
-			Menu.SetChecked(DevelopMenuItem, !ReleaseMode);
-			Menu.SetChecked(ReleaseMenuItem, ReleaseMode);
-			return true;
-		}
-
 		[MenuItem("Fuse/New/Implementation %&i")]
 		public static void ShowCreateImplementationWindow()
 		{

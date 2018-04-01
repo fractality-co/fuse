@@ -14,6 +14,7 @@ namespace Fuse.Core
 	/// </summary>
 	public class Fuse : SingletonBehaviour<Fuse>
 	{
+		private Environment _environment;
 		private Configuration _configuration;
 		private List<State> _allStates;
 		private State _root;
@@ -26,10 +27,10 @@ namespace Fuse.Core
 			_transitions = new List<StateTransition>();
 			_implementations = new Dictionary<string, List<ImplementationReference>>();
 
-#if RELEASE
-			Logger.Enabled = false;
-#else
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
 			Logger.Enabled = true;
+#else
+			Logger.Enabled = false;
 #endif
 
 			Logger.Info("Starting ...");
@@ -44,18 +45,30 @@ namespace Fuse.Core
 				Logger.Exception
 			);
 
+			yield return AssetBundles.LoadAsset<Environment>(
+				_configuration.Environment,
+				result => { _environment = result; },
+				null,
+				Logger.Exception
+			);
+
 			Logger.Info("Loaded core");
 
-			if (_configuration.Core.Load == LoadMethod.Online)
+			if (_environment.Loading == LoadMethod.Online)
 			{
 				yield return AssetBundles.UnloadBundle(Constants.CoreBundle, false);
-
-				yield return AssetBundles.LoadBundle(_configuration.Core.GetUri(Constants.CoreBundleFile),
-					_configuration.Core.Version, null, null, Logger.Exception);
+				yield return AssetBundles.LoadBundle(_environment.GetUri(Constants.CoreBundleFile), -1, null, null, Logger.Exception);
 
 				yield return AssetBundles.LoadAsset<Configuration>(
 					Constants.GetConfigurationAssetPath(),
 					result => { _configuration = result; },
+					null,
+					Logger.Exception
+				);
+
+				yield return AssetBundles.LoadAsset<Environment>(
+					_configuration.Environment,
+					result => { _environment = result; },
 					null,
 					Logger.Exception
 				);
@@ -172,7 +185,7 @@ namespace Fuse.Core
 			ImplementationReference reference = GetReference(implementation);
 			if (reference == null)
 			{
-				reference = new ImplementationReference(implementation, _configuration, OnEventPublished, StartAsync);
+				reference = new ImplementationReference(implementation, _environment, OnEventPublished, StartAsync);
 				_implementations[implementation.Type].Add(reference);
 			}
 
@@ -251,15 +264,14 @@ namespace Fuse.Core
 			private readonly Action<string> _notify;
 			private readonly Action<IEnumerator> _async;
 			private readonly Implementation _implementation;
-			private readonly Configuration _config;
+			private readonly Environment _environment;
 
-			public ImplementationReference(Implementation implementation, Configuration config, Action<string> notify,
-				Action<IEnumerator> async)
+			public ImplementationReference(Implementation impl, Environment env, Action<string> notify, Action<IEnumerator> async)
 			{
 				_async = async;
-				_config = config;
+				_environment = env;
 				_notify = notify;
-				_implementation = implementation;
+				_implementation = impl;
 			}
 
 			public void AddReference()
@@ -299,12 +311,12 @@ namespace Fuse.Core
 
 			private IEnumerator Load()
 			{
-				switch (_config.Implementations.Load)
+				switch (_environment.Loading)
 				{
 					case LoadMethod.Baked:
 						yield return AssetBundles.LoadBundle
 						(
-							_config.GetAssetPath(_implementation),
+							_environment.GetPath(_implementation.BundleFile),
 							null,
 							null,
 							Logger.Exception
@@ -313,8 +325,8 @@ namespace Fuse.Core
 					case LoadMethod.Online:
 						yield return AssetBundles.LoadBundle
 						(
-							_config.GetAssetUri(_implementation),
-							_config.GetAssetVersion(_implementation),
+							_environment.GetUri(_implementation.BundleFile),
+							(int)_environment.GetVersion(_implementation),
 							null,
 							null,
 							Logger.Exception
@@ -360,8 +372,8 @@ namespace Fuse.Core
 					// we have a custom default value
 					Lifecycle active = attribute.A.Lifecycle;
 					if (active == Lifecycle.None)
-						active = (Lifecycle)((DefaultValueAttribute)active.GetType().GetCustomAttributes(true)[0]).Value;
-						
+						active = (Lifecycle) ((DefaultValueAttribute) active.GetType().GetCustomAttributes(true)[0]).Value;
+
 					if (IsSubclassOfRawGeneric(typeof(IFuseInjection<>), attribute.A.GetType()))
 					{
 						if (toEnter == active)

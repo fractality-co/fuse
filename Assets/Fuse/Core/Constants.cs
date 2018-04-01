@@ -7,6 +7,7 @@ namespace Fuse.Core
 	{
 		public const string CoreAssetPath = "Assets/Bundles/Core";
 		public const string StatesAssetPath = CoreAssetPath + "/States";
+		public const string EnvironmentsAssetPath = CoreAssetPath + "/Environments";
 		public const string ImplementationAssetPath = "Assets/Bundles/Implementations";
 		public const string ImplementationScriptsPath = "Assets/Scripts";
 		public const string EditorBundlePath = "Bundles";

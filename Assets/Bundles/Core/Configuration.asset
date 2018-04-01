@@ -11,17 +11,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef368e696f744e21b65c3ae2e8216273, type: 3}
   m_Name: Configuration
   m_EditorClassIdentifier: 
-  Start: 
-  Core:
-    Load: 0
-    Version: 0
-    _host:
-      Develop: 
-      Release: 
-  Implementations:
-    Load: 0
-    Version: 0
-    _host:
-      Develop: 
-      Release: 
-  CustomVersions: []
+  Start: Assets/Bundles/Core/States/Test.asset
+  Environment: Assets/Bundles/Core/Environments/Deve.asset

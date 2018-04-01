@@ -10,6 +10,7 @@ using UnityEditor.Build;
 using UnityEditor.Callbacks;
 using UnityEditorInternal;
 using UnityEngine;
+using Environment = Fuse.Core.Environment;
 using Logger = Fuse.Core.Logger;
 using State = Fuse.Core.State;
 
@@ -42,8 +43,17 @@ namespace Fuse.Editor
 		[MenuItem("Fuse/New/State %&s")]
 		public static void ShowCreateStateWindow()
 		{
-			CreateStateWindow window = EditorWindow.GetWindow<CreateStateWindow>();
+			CreateAssetWindow window = EditorWindow.GetWindow<CreateAssetWindow>();
+			window.Setup("State");
 			window.OnCreate += CreateStateAsset;
+		}
+		
+		[MenuItem("Fuse/New/Environment %&e")]
+		public static void ShowCreateEnvironmentWindow()
+		{
+			CreateAssetWindow window = EditorWindow.GetWindow<CreateAssetWindow>();
+			window.Setup("Environment");
+			window.OnCreate += CreateEnvironmentAsset;
 		}
 
 		[MenuItem(SimulateMenuItem)]
@@ -103,10 +113,19 @@ namespace Fuse.Editor
 
 		private static void IntegrateAssets()
 		{
+			RemoveIntegratedAssets();
 			EditorUtils.PreparePath(Constants.AssetsBakedEditorPath);
 
 			Configuration configuration = AssetDatabase.LoadAssetAtPath<Configuration>(Constants.GetConfigurationAssetPath());
-			if (configuration.Implementations.Load == LoadMethod.Baked)
+			Environment environment = AssetDatabase.LoadAssetAtPath<Environment>(configuration.Environment);
+
+			if (environment == null)
+			{
+				Logger.Warn("Unable to integrate assets, no environment in Configuraton.");
+				return;
+			}
+
+			if (environment.Loading == LoadMethod.Baked)
 			{
 				EditorUtils.DirectoryCopy(GetAssetOutput(), GetAssetIntegration(), true);
 			}
@@ -196,6 +215,19 @@ namespace Fuse.Editor
 
 			Logger.Info("Created new " + typeof(State).Name + ": " + state.name);
 		}
+		
+		private static void CreateEnvironmentAsset(string name)
+		{
+			string path = Constants.EnvironmentsAssetPath + "/" + name + ".asset";
+
+			Environment environment = ScriptableObject.CreateInstance<Environment>();
+			environment.name = name;
+
+			AssetDatabase.CreateAsset(environment, path);
+			Selection.activeObject = environment;
+
+			Logger.Info("Created new " + typeof(Environment).Name + ": " + environment.name);
+		}
 
 		private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets,
 			string[] movedAssets,
@@ -228,6 +260,7 @@ namespace Fuse.Editor
 		{
 			EditorUtils.PreparePath(Constants.CoreAssetPath);
 			EditorUtils.PreparePath(Constants.StatesAssetPath);
+			EditorUtils.PreparePath(Constants.EnvironmentsAssetPath);
 
 			AssetImporter importer = AssetImporter.GetAtPath(Constants.CoreAssetPath);
 			if (importer != null)
@@ -288,7 +321,7 @@ namespace Fuse.Editor
 					asset = ScriptableObject.CreateInstance(type);
 					asset.name = assetName;
 					AssetDatabase.CreateAsset(asset, assetPath);
-					
+
 					Logger.Info("Created implementation: " + assetName);
 				}
 			}
@@ -303,16 +336,20 @@ namespace Fuse.Editor
 		}
 	}
 
-	public class CreateStateWindow : EditorWindow
+	public class CreateAssetWindow : EditorWindow
 	{
 		public Action<string> OnCreate;
 
 		private string _name = string.Empty;
 
-		public CreateStateWindow()
+		public CreateAssetWindow()
 		{
-			titleContent = new GUIContent("State");
 			maxSize = minSize = new Vector2(350, 60);
+		}
+
+		public void Setup(string windowTitle)
+		{
+			titleContent = new GUIContent(windowTitle);
 		}
 
 		private void OnGUI()

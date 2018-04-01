@@ -26,10 +26,14 @@ namespace Fuse.Core
 		}
 #endif
 
-		public static IEnumerator LoadBundle(Uri uri, uint version, Action<string> onComplete = null,
+		public static IEnumerator LoadBundle(Uri uri, int version = -1, Action<string> onComplete = null,
 			Action<float> onProgress = null, Action<string> onError = null)
 		{
-			UnityWebRequest request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, version, 0);
+			UnityWebRequest request;
+			if(version >= 0)
+				request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, (uint)version, 0);
+			else
+				request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, 0);
 
 			UnityWebRequestAsyncOperation sendRequest = request.SendWebRequest();
 			while (!sendRequest.isDone)
