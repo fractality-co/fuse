@@ -5,12 +5,18 @@ using System.Reflection;
 
 namespace Fuse.Implementation
 {
+	/// <summary>
+	/// Base interface that <see cref="Fuse"/> uses to mark attributes for processing within a specific <see cref="Lifecycle"/>.
+	/// </summary>
 	public interface IFuseAttribute
 	{
 		uint Order { get; }
 		Lifecycle Lifecycle { get; }
 	}
 
+	/// <summary>
+	/// Allows for communication of events to <see cref="Fuse"/>.
+	/// </summary>
 	public interface IFuseNotifier
 	{
 		void AddListener(Action<string> callback);
@@ -18,25 +24,31 @@ namespace Fuse.Implementation
 	}
 
 	/// <summary>
-	/// <see cref="Fuse"/> will process all attributes that implement this interface.
+	/// <see cref="N:Fuse" /> will process all attributes that implement this interface.
 	/// </summary>
-	public interface IFuseInjection<in T> : IFuseAttribute where T : MemberInfo
+	/// <inheritdoc />
+	public interface IFuseExecutor : IFuseAttribute
 	{
-		void Process(T target, object instance);
+		void Execute(MemberInfo target, object instance);
 	}
 
 	/// <summary>
-	/// <see cref="Fuse"/> will process on a new coroutine all attributes that implement this interface.
+	/// <see cref="N:Fuse" /> will process on a new coroutine all attributes that implement this interface.
 	/// </summary>
-	public interface IFuseInjectionAsync<in T> : IFuseAttribute where T : MemberInfo
+	/// <inheritdoc />
+	public interface IFuseExecutorAsync : IFuseAttribute
 	{
-		IEnumerator Process(T target, object instance);
+		IEnumerator Execute(MemberInfo target, object instance);
 	}
 
-	public interface IFuseLifecycle<in T> : IFuseAttribute where T : MemberInfo
+	/// <summary>
+	/// <see cref="N:Fuse" /> invokes the attribute when enterring or exitting the assigned <see cref="T:Fuse.Implementation.Lifecycle" />.
+	/// </summary>
+	/// <inheritdoc />
+	public interface IFuseLifecycle : IFuseAttribute
 	{
-		void OnEnter(T target, object instance);
-		void OnExit(T target, object instance);
+		void OnEnter(MemberInfo target, object instance);
+		void OnExit(MemberInfo target, object instance);
 	}
 
 	/// <summary>

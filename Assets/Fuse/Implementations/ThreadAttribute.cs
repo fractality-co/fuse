@@ -11,14 +11,25 @@ namespace Fuse.Implementation
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method)]
-	public class ThreadAttribute : Attribute, IFuseInjection<MethodInfo>
+	public class ThreadAttribute : Attribute, IFuseExecutor
 	{
-		public uint Order { get; [UsedImplicitly] private set; }
-		public Lifecycle Lifecycle { get; [UsedImplicitly] private set; }
-
-		public void Process(MethodInfo target, object instance)
+		public uint Order
 		{
-			ThreadPool.QueueUserWorkItem(context => { target.Invoke(instance, null); });
+			get;
+			[UsedImplicitly]
+			private set;
+		}
+
+		public Lifecycle Lifecycle
+		{
+			get;
+			[UsedImplicitly]
+			private set;
+		}
+
+		public void Execute(MemberInfo target, object instance)
+		{
+			ThreadPool.QueueUserWorkItem(context => { ((MethodInfo) target).Invoke(instance, null); });
 		}
 	}
 }

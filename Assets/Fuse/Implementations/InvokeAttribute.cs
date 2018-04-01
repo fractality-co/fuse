@@ -9,19 +9,28 @@ namespace Fuse.Implementation
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method | AttributeTargets.Event)]
-	public sealed class InvokeAttribute : Attribute, IFuseInjection<MethodInfo>, IFuseInjection<EventInfo>
+	public sealed class InvokeAttribute : Attribute, IFuseExecutor
 	{
-		public uint Order { get; [UsedImplicitly] private set; }
-		public Lifecycle Lifecycle { get; [UsedImplicitly] private set; }
-
-		public void Process(MethodInfo target, object instance)
+		public uint Order
 		{
-			target.Invoke(instance, null);
+			get;
+			[UsedImplicitly]
+			private set;
 		}
 
-		public void Process(EventInfo target, object instance)
+		public Lifecycle Lifecycle
 		{
-			target.GetRaiseMethod().Invoke(instance, null);
+			get;
+			[UsedImplicitly]
+			private set;
+		}
+
+		public void Execute(MemberInfo target, object instance)
+		{
+			if (target is MethodInfo)
+				((MethodInfo) target).Invoke(instance, null);
+			else if (target is EventInfo)
+				((EventInfo) target).GetRaiseMethod().Invoke(instance, null);
 		}
 	}
 }

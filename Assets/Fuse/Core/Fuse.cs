@@ -57,7 +57,8 @@ namespace Fuse.Core
 			if (_environment.Loading == LoadMethod.Online)
 			{
 				yield return AssetBundles.UnloadBundle(Constants.CoreBundle, false);
-				yield return AssetBundles.LoadBundle(_environment.GetUri(Constants.CoreBundleFile), -1, null, null, Logger.Exception);
+				yield return AssetBundles.LoadBundle(_environment.GetUri(Constants.CoreBundleFile), -1, null, null,
+					Logger.Exception);
 
 				yield return AssetBundles.LoadAsset<Configuration>(
 					Constants.GetConfigurationAssetPath(),
@@ -266,7 +267,8 @@ namespace Fuse.Core
 			private readonly Implementation _implementation;
 			private readonly Environment _environment;
 
-			public ImplementationReference(Implementation impl, Environment env, Action<string> notify, Action<IEnumerator> async)
+			public ImplementationReference(Implementation impl, Environment env, Action<string> notify,
+				Action<IEnumerator> async)
 			{
 				_async = async;
 				_environment = env;
@@ -326,7 +328,7 @@ namespace Fuse.Core
 						yield return AssetBundles.LoadBundle
 						(
 							_environment.GetUri(_implementation.BundleFile),
-							(int)_environment.GetVersion(_implementation),
+							(int) _environment.GetVersion(_implementation),
 							null,
 							null,
 							Logger.Exception
@@ -374,76 +376,29 @@ namespace Fuse.Core
 					if (active == Lifecycle.None)
 						active = (Lifecycle) ((DefaultValueAttribute) active.GetType().GetCustomAttributes(true)[0]).Value;
 
-					if (IsSubclassOfRawGeneric(typeof(IFuseInjection<>), attribute.A.GetType()))
+					if (toEnter == active)
 					{
-						if (toEnter == active)
-							continue;
+						IFuseExecutor executor = attribute.A as IFuseExecutor;
+						if (executor != null)
+							executor.Execute(attribute.B, _asset);
 
-						if (attribute.A is IFuseInjection<MethodInfo>)
-							((IFuseInjection<MethodInfo>) attribute.A).Process(attribute.B as MethodInfo, _asset);
-						else if (attribute.A is IFuseInjection<PropertyInfo>)
-							((IFuseInjection<PropertyInfo>) attribute.A).Process(attribute.B as PropertyInfo, _asset);
-						else if (attribute.A is IFuseInjection<FieldInfo>)
-							((IFuseInjection<FieldInfo>) attribute.A).Process(attribute.B as FieldInfo, _asset);
-						else if (attribute.A is IFuseInjection<EventInfo>)
-							((IFuseInjection<EventInfo>) attribute.A).Process(attribute.B as EventInfo, _asset);
+						IFuseExecutorAsync executorAsync = attribute.A as IFuseExecutorAsync;
+						if (executorAsync != null)
+							_async(executorAsync.Execute(attribute.B, _asset));
 					}
-					else if (IsSubclassOfRawGeneric(typeof(IFuseInjectionAsync<>), attribute.A.GetType()))
-					{
-						if (toEnter == active)
-							continue;
 
-						if (attribute.A is IFuseInjectionAsync<MethodInfo>)
-							_async(((IFuseInjectionAsync<MethodInfo>) attribute.A).Process(attribute.B as MethodInfo, _asset));
-						else if (attribute.A is IFuseInjectionAsync<PropertyInfo>)
-							_async(((IFuseInjectionAsync<PropertyInfo>) attribute.A).Process(attribute.B as PropertyInfo, _asset));
-						else if (attribute.A is IFuseInjectionAsync<FieldInfo>)
-							_async(((IFuseInjectionAsync<FieldInfo>) attribute.A).Process(attribute.B as FieldInfo, _asset));
-						else if (attribute.A is IFuseInjectionAsync<EventInfo>)
-							_async(((IFuseInjectionAsync<EventInfo>) attribute.A).Process(attribute.B as EventInfo, _asset));
-					}
-					else if (IsSubclassOfRawGeneric(typeof(IFuseLifecycle<>), attribute.A.GetType()))
+					if (toEnter == active || toExit == active)
 					{
-						if (toEnter == active)
+						IFuseLifecycle lifecycle = attribute.A as IFuseLifecycle;
+						if (lifecycle != null)
 						{
-							if (attribute.A is IFuseLifecycle<MethodInfo>)
-								((IFuseLifecycle<MethodInfo>) attribute.A).OnEnter(attribute.B as MethodInfo, _asset);
-							else if (attribute.A is IFuseLifecycle<PropertyInfo>)
-								((IFuseLifecycle<PropertyInfo>) attribute.A).OnEnter(attribute.B as PropertyInfo, _asset);
-							else if (attribute.A is IFuseLifecycle<FieldInfo>)
-								((IFuseLifecycle<FieldInfo>) attribute.A).OnEnter(attribute.B as FieldInfo, _asset);
-							else if (attribute.A is IFuseLifecycle<EventInfo>)
-								((IFuseLifecycle<EventInfo>) attribute.A).OnEnter(attribute.B as EventInfo, _asset);
-						}
-						else if (toExit == active)
-						{
-							if (attribute.A is IFuseLifecycle<MethodInfo>)
-								((IFuseLifecycle<MethodInfo>) attribute.A).OnExit(attribute.B as MethodInfo, _asset);
-							else if (attribute.A is IFuseLifecycle<PropertyInfo>)
-								((IFuseLifecycle<PropertyInfo>) attribute.A).OnExit(attribute.B as PropertyInfo, _asset);
-							else if (attribute.A is IFuseLifecycle<FieldInfo>)
-								((IFuseLifecycle<FieldInfo>) attribute.A).OnExit(attribute.B as FieldInfo, _asset);
-							else if (attribute.A is IFuseLifecycle<EventInfo>)
-								((IFuseLifecycle<EventInfo>) attribute.A).OnExit(attribute.B as EventInfo, _asset);
+							if (toEnter == active)
+								lifecycle.OnEnter(attribute.B, _asset);
+							else if (toExit == active)
+								lifecycle.OnExit(attribute.B, _asset);
 						}
 					}
 				}
-			}
-
-			private static bool IsSubclassOfRawGeneric(Type generic, Type toCheck)
-			{
-				while (toCheck != null && toCheck != typeof(object))
-				{
-					var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
-					if (generic == cur)
-					{
-						return true;
-					}
-
-					toCheck = toCheck.BaseType;
-				}
-
-				return false;
 			}
 		}
 

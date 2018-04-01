@@ -3,6 +3,7 @@ using System.Collections;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Fuse.Core;
 using JetBrains.Annotations;
 using Object = UnityEngine.Object;
 
@@ -13,8 +14,7 @@ namespace Fuse.Implementation
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
-	public sealed class InjectAttribute : Attribute, IFuseInjection<PropertyInfo>, IFuseInjection<FieldInfo>,
-		IFuseInjection<MethodInfo>
+	public sealed class InjectAttribute : Attribute, IFuseExecutor
 	{
 		public uint Order
 		{
@@ -35,20 +35,26 @@ namespace Fuse.Implementation
 			_regex = new Regex(regex);
 		}
 
-		public void Process(MethodInfo target, object instance)
+		public void Execute(MemberInfo target, object instance)
 		{
-			ParameterInfo[] parameters = target.GetParameters();
-			target.Invoke(instance, parameters.Select(parameter => GetValue(parameter.ParameterType)).ToArray());
-		}
-
-		public void Process(PropertyInfo target, object instance)
-		{
-			target.SetValue(instance, GetValue(target.PropertyType), null);
-		}
-
-		public void Process(FieldInfo target, object instance)
-		{
-			target.SetValue(instance, GetValue(target.FieldType));
+			if (target is MethodInfo)
+			{
+				MethodInfo methodInfo = (MethodInfo) target;
+				ParameterInfo[] parameters = methodInfo.GetParameters();
+				methodInfo.Invoke(instance, parameters.Select(parameter => GetValue(parameter.ParameterType)).ToArray());
+			}
+			else if (target is PropertyInfo)
+			{
+				PropertyInfo propertyInfo = (PropertyInfo) target;
+				propertyInfo.SetValue(instance, GetValue(propertyInfo.PropertyType), null);
+			}
+			else if (target is FieldInfo)
+			{
+				FieldInfo fieldInfo = (FieldInfo) target;
+				fieldInfo.SetValue(instance, GetValue(fieldInfo.FieldType));
+			}
+			else
+				Logger.Exception("Unsupported member type for inject: " + target.GetType());
 		}
 
 		private object GetValue(Type valueType)
@@ -75,7 +81,8 @@ namespace Fuse.Implementation
 				return Object.FindObjectsOfType(valueType).First(current => _regex.IsMatch(current.name));
 			}
 
-			throw new NotImplementedException(valueType.Name + " is not supported.");
+			Logger.Exception(valueType.Name + " is not supported.");
+			return null;
 		}
 	}
 }

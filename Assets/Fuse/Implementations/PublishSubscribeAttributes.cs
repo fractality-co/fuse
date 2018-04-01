@@ -13,7 +13,7 @@ namespace Fuse.Implementation
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Event)]
-	public sealed class PublishAttribute : PublishSubscribeAttribute, IFuseLifecycle<EventInfo>
+	public sealed class PublishAttribute : PublishSubscribeAttribute, IFuseLifecycle
 	{
 		public uint Order
 		{
@@ -33,14 +33,18 @@ namespace Fuse.Implementation
 		{
 		}
 
-		public void OnEnter(EventInfo target, object instance)
+		public void OnEnter(MemberInfo target, object instance)
 		{
-			target.AddEventHandler(instance, Notify);
+			EventInfo eventInfo = target as EventInfo;
+			if (eventInfo != null)
+				eventInfo.AddEventHandler(instance, Notify);
 		}
 
-		public void OnExit(EventInfo target, object instance)
+		public void OnExit(MemberInfo target, object instance)
 		{
-			target.RemoveEventHandler(instance, Notify);
+			EventInfo eventInfo = target as EventInfo;
+			if (eventInfo != null)
+				eventInfo.RemoveEventHandler(instance, Notify);
 		}
 	}
 
@@ -50,8 +54,7 @@ namespace Fuse.Implementation
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method | AttributeTargets.Event)]
-	public sealed class SubscribeAttribute : PublishSubscribeAttribute, IFuseLifecycle<MethodInfo>,
-		IFuseLifecycle<EventInfo>
+	public sealed class SubscribeAttribute : PublishSubscribeAttribute, IFuseLifecycle
 	{
 		public uint Order
 		{
@@ -63,7 +66,7 @@ namespace Fuse.Implementation
 			get { return Lifecycle.Active; }
 		}
 
-		private Pair<MethodInfo, object> _reference;
+		private Pair<MemberInfo, object> _reference;
 
 		public SubscribeAttribute(Enum type) : base(type.ToString())
 		{
@@ -73,25 +76,15 @@ namespace Fuse.Implementation
 		{
 		}
 
-		public void OnEnter(MethodInfo target, object instance)
+		public void OnEnter(MemberInfo target, object instance)
 		{
 			_reference = AddListener(target, instance);
 		}
 
-		public void OnExit(MethodInfo target, object instance)
+		public void OnExit(MemberInfo target, object instance)
 		{
 			RemoveListener(_reference);
 			_reference = null;
-		}
-
-		public void OnEnter(EventInfo target, object instance)
-		{
-			OnEnter(target.GetRaiseMethod(), instance);
-		}
-
-		public void OnExit(EventInfo target, object instance)
-		{
-			OnExit(target.GetRaiseMethod(), instance);
 		}
 	}
 
@@ -102,8 +95,8 @@ namespace Fuse.Implementation
 
 		private static readonly List<Action<string>> StateListeners = new List<Action<string>>();
 
-		private static readonly Dictionary<string, List<Pair<MethodInfo, object>>> Listeners =
-			new Dictionary<string, List<Pair<MethodInfo, object>>>();
+		private static readonly Dictionary<string, List<Pair<MemberInfo, object>>> Listeners =
+			new Dictionary<string, List<Pair<MemberInfo, object>>>();
 
 		protected delegate void Handler(string type);
 
@@ -114,25 +107,28 @@ namespace Fuse.Implementation
 			_type = type;
 
 			if (!Listeners.ContainsKey(_type))
-				Listeners.Add(_type, new List<Pair<MethodInfo, object>>());
+				Listeners.Add(_type, new List<Pair<MemberInfo, object>>());
 		}
 
-		protected Pair<MethodInfo, object> AddListener(MethodInfo target, object instance)
+		protected Pair<MemberInfo, object> AddListener(MemberInfo target, object instance)
 		{
-			Pair<MethodInfo, object> reference = new Pair<MethodInfo, object>(target, instance);
+			Pair<MemberInfo, object> reference = new Pair<MemberInfo, object>(target, instance);
 			Listeners[_type].Add(reference);
 			return reference;
 		}
 
-		protected void RemoveListener(Pair<MethodInfo, object> reference)
+		protected void RemoveListener(Pair<MemberInfo, object> reference)
 		{
 			Listeners[_type].Remove(reference);
 		}
 
 		private static void NotifyListeners(string type)
 		{
-			foreach (Pair<MethodInfo, object> reference in Listeners[type])
-				reference.A.Invoke(reference.B, null);
+			foreach (Pair<MemberInfo, object> reference in Listeners[type])
+			{
+				if (reference.A is MethodInfo)
+					((MethodInfo) reference.A).Invoke(reference.B, null);
+			}
 
 			StateListeners.ForEach(callback => callback(type));
 		}
