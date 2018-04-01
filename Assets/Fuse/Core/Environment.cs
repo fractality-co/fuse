@@ -8,7 +8,10 @@ namespace Fuse.Core
 	{
 		public LoadMethod Loading;
 		public string HostUri;
-		public uint DefaultVersion;
+
+		[Tooltip("Negative value turns off version control")]
+		public int DefaultVersion = -1;
+
 		public CustomVersion[] CustomVersion;
 
 		public string GetPath(string filePath)
@@ -21,7 +24,7 @@ namespace Fuse.Core
 			return new Uri(new Uri(HostUri), new Uri(filePath));
 		}
 
-		public uint GetVersion(Implementation implementation)
+		public int GetVersion(Implementation implementation)
 		{
 			foreach (CustomVersion custom in CustomVersion)
 				if (custom.Bundle == implementation.Bundle)
@@ -37,8 +40,8 @@ namespace Fuse.Core
 		[AssetBundleReference]
 		public string Bundle;
 
-		[UsedImplicitly]
-		public uint Version;
+		[UsedImplicitly, Tooltip("Negative value turns off version control")]
+		public int Version = -1;
 	}
 
 	public enum LoadMethod

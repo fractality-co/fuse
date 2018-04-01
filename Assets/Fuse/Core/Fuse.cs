@@ -328,7 +328,7 @@ namespace Fuse.Core
 						yield return AssetBundles.LoadBundle
 						(
 							_environment.GetUri(_implementation.BundleFile),
-							(int) _environment.GetVersion(_implementation),
+							_environment.GetVersion(_implementation),
 							null,
 							null,
 							Logger.Exception
