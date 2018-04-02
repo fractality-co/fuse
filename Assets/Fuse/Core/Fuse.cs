@@ -86,7 +86,6 @@ namespace Fuse.Core
 				null,
 				Logger.Exception);
 
-
 			yield return SetState(_configuration.Start);
 
 			Logger.Info("Started");
@@ -507,14 +506,14 @@ namespace Fuse.Core
 						break;
 				}
 
-				yield return SceneManager.LoadSceneAsync(Constants.GetSceneNameFromPath(_path));
+				yield return SceneManager.LoadSceneAsync(Constants.GetFileNameFromPath(_path, Constants.SceneExtension));
 
 				_loaded = true;
 			}
 
 			private IEnumerator Unload()
 			{
-				yield return SceneManager.UnloadSceneAsync(Constants.GetSceneNameFromPath(_path));
+				yield return SceneManager.UnloadSceneAsync(Constants.GetFileNameFromPath(_path, Constants.SceneExtension));
 				AssetBundles.UnloadBundle(Constants.GetSceneBundleFromPath(_path), true);
 				_loaded = false;
 			}

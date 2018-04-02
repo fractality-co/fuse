@@ -29,6 +29,15 @@ namespace Fuse.Core
 		public static IEnumerator LoadBundle(Uri uri, int version = -1, Action<string> onComplete = null,
 			Action<float> onProgress = null, Action<string> onError = null)
 		{
+#if UNITY_EDITOR
+			if (Simulate)
+			{
+				if (onComplete != null)
+					onComplete(Constants.GetFileNameFromPath(uri.AbsolutePath, Constants.BundleExtension));
+				yield break;
+			}
+#endif
+
 			UnityWebRequest request;
 			if (version >= 0)
 				request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, (uint) version, 0);
@@ -63,6 +72,15 @@ namespace Fuse.Core
 		public static IEnumerator LoadBundle(string path, Action<string> onComplete = null, Action<float> onProgress = null,
 			Action<string> onError = null)
 		{
+#if UNITY_EDITOR
+			if (Simulate)
+			{
+				if (onComplete != null)
+					onComplete(Constants.GetFileNameFromPath(path, Constants.BundleExtension));
+				yield break;
+			}
+#endif
+
 			AssetBundleCreateRequest request = AssetBundle.LoadFromFileAsync(path);
 
 			while (!request.isDone)
@@ -91,6 +109,14 @@ namespace Fuse.Core
 
 		public static bool UnloadBundle(string bundleName, bool unloadActiveAssets)
 		{
+#if UNITY_EDITOR
+			if (Simulate)
+			{
+				Clean();
+				return true;
+			}
+#endif
+
 			AssetBundle loadedBundle = AssetBundle.GetAllLoadedAssetBundles().First(bundle => bundle.name == bundleName);
 			if (loadedBundle == null)
 				return false;

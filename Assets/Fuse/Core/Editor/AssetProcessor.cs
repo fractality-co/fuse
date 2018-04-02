@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -76,11 +77,14 @@ namespace Fuse.Editor
 
 				IntegrateAssets();
 				AssetBundles.Simulate = false;
+
+				ProcessLevels();
 			}
 			else
 			{
 				RemoveIntegratedAssets();
 				AssetBundles.Simulate = true;
+				ProcessLevels();
 
 				EditorUtility.DisplayDialog("Simulation Mode",
 					"Integrated assets removed, you are now in simulation mode.",
@@ -312,14 +316,35 @@ namespace Fuse.Editor
 		{
 			EditorUtils.PreparePath(Constants.ScenesAssetPath);
 
+			List<EditorBuildSettingsScene> baseScenes = EditorBuildSettings.scenes.ToList();
+			List<EditorBuildSettingsScene> scenes = new List<EditorBuildSettingsScene>();
 			foreach (string guid in AssetDatabase.FindAssets("t:Scene", new[] {Constants.ScenesAssetPath}))
 			{
 				string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+				if (AssetBundles.Simulate)
+					scenes.Add(new EditorBuildSettingsScene(assetPath, true));
+
+				int index = baseScenes.FindIndex(current => current.path == assetPath);
+				if (index >= 0)
+					baseScenes.RemoveAt(index);
 
 				AssetImporter importer = AssetImporter.GetAtPath(assetPath);
 				if (importer != null)
 					importer.SetAssetBundleNameAndVariant(Constants.GetSceneBundleFromPath(assetPath), string.Empty);
 			}
+
+			baseScenes.AddRange(scenes);
+			for (int i = baseScenes.Count - 1; i >= 0; i--)
+			{
+				string path = baseScenes[i].path;
+				if (!AssetBundles.Simulate && path.Contains(Constants.ScenesAssetPath) ||
+				    AssetDatabase.LoadMainAssetAtPath(path) == null)
+				{
+					baseScenes.RemoveAt(i);
+				}
+			}
+
+			EditorBuildSettings.scenes = baseScenes.ToArray();
 		}
 
 		private static void ProcessImplementations()

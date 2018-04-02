@@ -22,7 +22,7 @@ namespace Fuse.Core
 		public const string ImplementationBundleFile = ImplementationBundle + BundleExtension;
 
 		public const string ScenesAssetPath = "Assets/Bundles/Scenes";
-		private const string SceneExtension = ".unity";
+		public const string SceneExtension = ".unity";
 		private const string SceneBundle = "{0}-scene";
 		private const string SceneBundleFile = SceneBundle + BundleExtension;
 
@@ -42,10 +42,10 @@ namespace Fuse.Core
 			return string.Format(SceneBundleFile, ScenePathToBundleName(path));
 		}
 
-		public static string GetSceneNameFromPath(string path)
+		public static string GetFileNameFromPath(string path, string extension)
 		{
-			string[] values = path.Split(DefaultSeparator);
-			return values[values.Length - 1].Replace(SceneExtension, string.Empty);
+			string[] values = path.Split(path.Contains("/") ? '/' : '\\');
+			return values[values.Length - 1].Replace(extension, string.Empty);
 		}
 
 		private static string ScenePathToBundleName(string path)

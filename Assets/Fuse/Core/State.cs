@@ -31,7 +31,9 @@ namespace Fuse.Core
 		[AssetReference(typeof(ScriptableObject), typeof(ImplementationAttribute))]
 		public string[] Implementations;
 
+#if UNITY_EDITOR
 		[AssetReference(typeof(SceneAsset), Constants.ScenesAssetPath)]
+#endif
 		public string[] Scenes;
 	}
 
