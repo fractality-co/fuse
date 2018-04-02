@@ -8,8 +8,10 @@ using Fuse.Implementation;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Callbacks;
+using UnityEditor.SceneManagement;
 using UnityEditorInternal;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Environment = Fuse.Core.Environment;
 using Logger = Fuse.Core.Logger;
 using State = Fuse.Core.State;
@@ -54,6 +56,14 @@ namespace Fuse.Editor
 			CreateAssetWindow window = EditorWindow.GetWindow<CreateAssetWindow>();
 			window.Setup("Environment");
 			window.OnCreate += CreateEnvironmentAsset;
+		}
+
+		[MenuItem("Fuse/New/Scene %&l")]
+		public static void ShowCreateLevelWindow()
+		{
+			CreateAssetWindow window = EditorWindow.GetWindow<CreateAssetWindow>();
+			window.Setup("Scene");
+			window.OnCreate += CreateScene;
 		}
 
 		[MenuItem(SimulateMenuItem)]
@@ -177,16 +187,14 @@ namespace Fuse.Editor
 			string[] bundleNames = AssetDatabase.GetAllAssetBundleNames();
 			FileInfo[] infos = buildDirectory.GetFiles();
 
-			// delete manifests, old asset bundles, and the weird generated file from a Unity issue
 			foreach (FileInfo fileInfo in infos)
-				if (fileInfo.Name.Contains(".unity3d") || fileInfo.Name.Contains(".manifest") ||
+				if (fileInfo.Name.Contains(Constants.BundleExtension) || fileInfo.Name.Contains(".manifest") ||
 				    fileInfo.Name == buildDirectory.Name)
 					File.Delete(fileInfo.FullName);
 
-			// lastly rename existing ones to proper extension
 			foreach (FileInfo fileInfo in infos)
 				if (((IList) bundleNames).Contains(fileInfo.Name))
-					File.Move(fileInfo.FullName, fileInfo.FullName + ".unity3d");
+					File.Move(fileInfo.FullName, fileInfo.FullName + Constants.BundleExtension);
 
 			Debug.Log("Built assets for: " + EditorUserBuildSettings.activeBuildTarget);
 		}
@@ -229,6 +237,18 @@ namespace Fuse.Editor
 			Logger.Info("Created new " + typeof(Environment).Name + ": " + environment.name);
 		}
 
+		private static void CreateScene(string name)
+		{
+			string path = Constants.ScenesAssetPath + "/" + name + ".unity";
+
+			Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+			EditorSceneManager.SaveScene(scene, path);
+			SceneManager.UnloadSceneAsync(scene);
+			Selection.activeObject = AssetDatabase.LoadAssetAtPath(path, typeof(SceneAsset));
+
+			Logger.Info("Created new level (Scene): " + name);
+		}
+
 		private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets,
 			string[] movedAssets,
 			string[] movedFromAssetPaths)
@@ -239,12 +259,15 @@ namespace Fuse.Editor
 		[DidReloadScripts]
 		private static void ProcessAssets()
 		{
-			string title = "Processing Assets";
+			const string title = "Processing Assets";
 
 			EditorUtility.DisplayProgressBar(title, "Processing core", 0);
 			ProcessCore();
 
-			EditorUtility.DisplayProgressBar(title, "Processing implementations", 0.5f);
+			EditorUtility.DisplayProgressBar(title, "Processing levels", 0.5f);
+			ProcessLevels();
+
+			EditorUtility.DisplayProgressBar(title, "Processing features", 0.5f);
 			ProcessImplementations();
 			CleanupImplementations();
 
@@ -280,8 +303,22 @@ namespace Fuse.Editor
 				config.Environment = Constants.EnvironmentsAssetPath + Constants.DefaultSeparator + envDefaultName +
 				                     Constants.AssetExtension;
 				config.Start = Constants.StatesAssetPath + Constants.DefaultSeparator + stateDefaultName +
-				                     Constants.AssetExtension;
+				               Constants.AssetExtension;
 				AssetDatabase.CreateAsset(config, Constants.GetConfigurationAssetPath());
+			}
+		}
+
+		private static void ProcessLevels()
+		{
+			EditorUtils.PreparePath(Constants.ScenesAssetPath);
+
+			foreach (string guid in AssetDatabase.FindAssets("t:Scene", new[] {Constants.ScenesAssetPath}))
+			{
+				string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+
+				AssetImporter importer = AssetImporter.GetAtPath(assetPath);
+				if (importer != null)
+					importer.SetAssetBundleNameAndVariant(Constants.GetSceneBundleFromPath(assetPath), string.Empty);
 			}
 		}
 

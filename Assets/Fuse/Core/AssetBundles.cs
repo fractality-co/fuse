@@ -30,8 +30,8 @@ namespace Fuse.Core
 			Action<float> onProgress = null, Action<string> onError = null)
 		{
 			UnityWebRequest request;
-			if(version >= 0)
-				request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, (uint)version, 0);
+			if (version >= 0)
+				request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, (uint) version, 0);
 			else
 				request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, 0);
 

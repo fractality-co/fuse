@@ -24,10 +24,10 @@ namespace Fuse.Core
 			return new Uri(new Uri(HostUri), new Uri(filePath));
 		}
 
-		public int GetVersion(Implementation implementation)
+		public int GetVersion(string bundle)
 		{
 			foreach (CustomVersion custom in CustomVersion)
-				if (custom.Bundle == implementation.Bundle)
+				if (custom.Bundle == bundle)
 					return custom.Version;
 
 			return DefaultVersion;

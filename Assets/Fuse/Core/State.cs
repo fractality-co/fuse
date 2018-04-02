@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Fuse.Implementation;
+using JetBrains.Annotations;
 using UnityEngine;
 using Object = UnityEngine.Object;
 #if UNITY_EDITOR
@@ -29,6 +30,9 @@ namespace Fuse.Core
 
 		[AssetReference(typeof(ScriptableObject), typeof(ImplementationAttribute))]
 		public string[] Implementations;
+
+		[AssetReference(typeof(SceneAsset), Constants.ScenesAssetPath)]
+		public string[] Scenes;
 	}
 
 	[Serializable]
@@ -36,22 +40,16 @@ namespace Fuse.Core
 	{
 		public string BundleFile
 		{
-			get { return Bundle + Constants.BundleExtension; }
+			get { return string.Format(Constants.ImplementationBundleFile, Type.ToLower().Trim()); }
 		}
 
 		public string Bundle
 		{
-			get { return Type.ToLower().Trim(); }
+			get { return string.Format(Constants.ImplementationBundle, Type.ToLower().Trim()); }
 		}
 
 		public readonly string Type;
 		public readonly string Name;
-
-		public Implementation(string type, string name)
-		{
-			Type = type;
-			Name = name;
-		}
 
 		public Implementation(string path)
 		{
@@ -67,6 +65,7 @@ namespace Fuse.Core
 		[AssetReference(typeof(State))]
 		public string To;
 
+		[UsedImplicitly]
 		public string[] Events;
 	}
 
@@ -78,11 +77,23 @@ namespace Fuse.Core
 	{
 		public readonly Type Type;
 		public readonly Type RequiredAttribute;
+		public readonly string RequiredSubpath;
 
-		public AssetReference(Type type, Type requiredAttribute = null)
+		public AssetReference(Type type)
+		{
+			Type = type;
+		}
+
+		public AssetReference(Type type, Type requiredAttribute)
 		{
 			Type = type;
 			RequiredAttribute = requiredAttribute;
+		}
+
+		public AssetReference(Type type, string requiredSubpath)
+		{
+			Type = type;
+			RequiredSubpath = requiredSubpath;
 		}
 	}
 
@@ -118,7 +129,14 @@ namespace Fuse.Core
 					return;
 				}
 
-				property.stringValue = AssetDatabase.GetAssetPath(asset);
+				assetPath = AssetDatabase.GetAssetPath(asset);
+				if (!string.IsNullOrEmpty(assetPath) && !assetPath.Contains(reference.RequiredSubpath))
+				{
+					Logger.Warn("Asset assigned does not meet required subpath: " + reference.RequiredSubpath);
+					return;
+				}
+
+				property.stringValue = assetPath;
 			}
 		}
 	}

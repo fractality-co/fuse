@@ -13,5 +13,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Loading: 0
   HostUri: 
-  DefaultVersion: 0
+  DefaultVersion: -1
   CustomVersion: []

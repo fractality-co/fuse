@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using Fuse.Implementation;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace Fuse.Core
@@ -21,11 +22,13 @@ namespace Fuse.Core
 
 		private List<StateTransition> _transitions;
 		private Dictionary<string, List<ImplementationReference>> _implementations;
+		private Dictionary<string, SceneReference> _scenes;
 
 		private IEnumerator Start()
 		{
 			_transitions = new List<StateTransition>();
 			_implementations = new Dictionary<string, List<ImplementationReference>>();
+			_scenes = new Dictionary<string, SceneReference>();
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
 			Logger.Enabled = true;
@@ -113,7 +116,10 @@ namespace Fuse.Core
 			if (_root != null)
 			{
 				foreach (Implementation implementation in GetImplementations(_root))
-					RemoveReference(implementation);
+					RemoveImplementationReference(implementation);
+
+				foreach (string scenePath in GetScenes(_root))
+					RemoveSceneReference(scenePath);
 			}
 
 			_root = GetState(state);
@@ -123,7 +129,10 @@ namespace Fuse.Core
 				_transitions.Add(new StateTransition(transition));
 
 			foreach (Implementation implementation in GetImplementations(_root))
-				AddReference(implementation);
+				AddImplementationReference(implementation);
+
+			foreach (string scenePath in GetScenes(_root))
+				AddSceneReference(scenePath);
 
 			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
 			{
@@ -131,6 +140,16 @@ namespace Fuse.Core
 					if (!reference.Referenced)
 						yield return CleanupImplementation(reference);
 			}
+
+			List<string> inactiveScenes = new List<string>();
+			foreach (KeyValuePair<string, SceneReference> pair in _scenes)
+			{
+				yield return pair.Value.Process();
+				if (!pair.Value.Active)
+					inactiveScenes.Add(pair.Key);
+			}
+
+			inactiveScenes.ForEach(key => _scenes.Remove(key));
 
 			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
 			{
@@ -160,6 +179,19 @@ namespace Fuse.Core
 			return result;
 		}
 
+		private List<string> GetScenes(State state)
+		{
+			List<string> result = new List<string>();
+
+			while (state != null)
+			{
+				result.AddRange(state.Scenes);
+				state = state.IsRoot ? null : GetState(state.Parent);
+			}
+
+			return result;
+		}
+
 		private List<Implementation> GetImplementations(State state)
 		{
 			List<Implementation> result = new List<Implementation>();
@@ -173,12 +205,25 @@ namespace Fuse.Core
 			return result;
 		}
 
-		private void RemoveReference(Implementation implementation)
+		private void RemoveSceneReference(string scenePath)
+		{
+			_scenes[scenePath].RemoveReference();
+		}
+
+		private void AddSceneReference(string scenePath)
+		{
+			if (!_scenes.ContainsKey(scenePath))
+				_scenes[scenePath] = new SceneReference(scenePath, _environment);
+
+			_scenes[scenePath].AddReference();
+		}
+
+		private void RemoveImplementationReference(Implementation implementation)
 		{
 			GetReference(implementation).RemoveReference();
 		}
 
-		private void AddReference(Implementation implementation)
+		private void AddImplementationReference(Implementation implementation)
 		{
 			if (!_implementations.ContainsKey(implementation.Type))
 				_implementations[implementation.Type] = new List<ImplementationReference>();
@@ -237,11 +282,9 @@ namespace Fuse.Core
 
 		private class ImplementationReference
 		{
-			public uint Count { get; private set; }
-
 			public bool Referenced
 			{
-				get { return Count > 0; }
+				get { return _count > 0; }
 			}
 
 			public string Type
@@ -256,12 +299,13 @@ namespace Fuse.Core
 
 			public bool Running
 			{
-				get { return Lifecycle != Lifecycle.None; }
+				get { return _lifecycle != Lifecycle.None; }
 			}
 
-			public Lifecycle Lifecycle { get; private set; }
-
+			private uint _count;
+			private Lifecycle _lifecycle;
 			private Object _asset;
+
 			private readonly Action<string> _notify;
 			private readonly Action<IEnumerator> _async;
 			private readonly Implementation _implementation;
@@ -278,12 +322,12 @@ namespace Fuse.Core
 
 			public void AddReference()
 			{
-				Count++;
+				_count++;
 			}
 
 			public void RemoveReference()
 			{
-				Count--;
+				_count--;
 			}
 
 			public IEnumerator SetLifecycle(Lifecycle lifecycle)
@@ -293,22 +337,21 @@ namespace Fuse.Core
 					case Lifecycle.Load:
 						yield return Load();
 						ProcessListeners(true);
-						ProcessInjections(lifecycle, Lifecycle);
+						ProcessInjections(lifecycle, _lifecycle);
 						break;
 					case Lifecycle.Setup:
-						ProcessInjections(lifecycle, Lifecycle);
-						break;
+					case Lifecycle.Active:
 					case Lifecycle.Cleanup:
-						ProcessInjections(lifecycle, Lifecycle);
+						ProcessInjections(lifecycle, _lifecycle);
 						break;
 					case Lifecycle.Unload:
-						ProcessInjections(lifecycle, Lifecycle);
+						ProcessInjections(lifecycle, _lifecycle);
 						ProcessListeners(false);
 						AssetBundles.UnloadBundle(_implementation.Bundle, true);
 						break;
 				}
 
-				Lifecycle = lifecycle;
+				_lifecycle = lifecycle;
 			}
 
 			private IEnumerator Load()
@@ -328,7 +371,7 @@ namespace Fuse.Core
 						yield return AssetBundles.LoadBundle
 						(
 							_environment.GetUri(_implementation.BundleFile),
-							_environment.GetVersion(_implementation),
+							_environment.GetVersion(_implementation.Bundle),
 							null,
 							null,
 							Logger.Exception
@@ -399,6 +442,81 @@ namespace Fuse.Core
 						}
 					}
 				}
+			}
+		}
+
+		private class SceneReference
+		{
+			public bool Active
+			{
+				get { return _loaded || _count > 0; }
+			}
+
+			private readonly string _path;
+			private readonly Environment _environment;
+
+			private uint _count;
+			private bool _loaded;
+
+			public SceneReference(string path, Environment environment)
+			{
+				_path = path;
+				_environment = environment;
+			}
+
+			public void AddReference()
+			{
+				_count++;
+			}
+
+			public void RemoveReference()
+			{
+				_count--;
+			}
+
+			public IEnumerator Process()
+			{
+				if (_count == 0 && _loaded)
+					yield return Unload();
+				else if (_count > 0 && !_loaded)
+					yield return Load();
+			}
+
+			private IEnumerator Load()
+			{
+				switch (_environment.Loading)
+				{
+					case LoadMethod.Baked:
+						yield return AssetBundles.LoadBundle
+						(
+							_environment.GetPath(Constants.GetSceneBundleFileFromPath(_path)),
+							null,
+							null,
+							Logger.Exception
+						);
+						break;
+					case LoadMethod.Online:
+						yield return AssetBundles.LoadBundle
+						(
+							_environment.GetUri(Constants.GetSceneBundleFileFromPath(_path)),
+							_environment.GetVersion(Constants.GetSceneBundleFromPath(_path)),
+							null,
+							null,
+							Logger.Exception
+						);
+						break;
+				}
+
+				yield return SceneManager.LoadSceneAsync(Constants.GetSceneNameFromPath(_path));
+
+				_loaded = true;
+			}
+
+			private IEnumerator Unload()
+			{
+				yield return SceneManager.UnloadSceneAsync(Constants.GetSceneNameFromPath(_path));
+				AssetBundles.UnloadBundle(Constants.GetSceneBundleFromPath(_path), true);
+				_loaded = false;
 			}
 		}
 
