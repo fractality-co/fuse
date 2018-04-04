@@ -78,13 +78,13 @@ namespace Fuse.Editor
 				IntegrateAssets();
 				AssetBundles.Simulate = false;
 
-				ProcessLevels();
+				ProcessScenes();
 			}
 			else
 			{
 				RemoveIntegratedAssets();
 				AssetBundles.Simulate = true;
-				ProcessLevels();
+				ProcessScenes();
 
 				EditorUtility.DisplayDialog("Simulation Mode",
 					"Integrated assets removed, you are now in simulation mode.",
@@ -268,12 +268,11 @@ namespace Fuse.Editor
 			EditorUtility.DisplayProgressBar(title, "Processing core", 0);
 			ProcessCore();
 
-			EditorUtility.DisplayProgressBar(title, "Processing levels", 0.5f);
-			ProcessLevels();
+			EditorUtility.DisplayProgressBar(title, "Processing scenes", 0.5f);
+			ProcessScenes();
 
 			EditorUtility.DisplayProgressBar(title, "Processing features", 0.5f);
 			ProcessImplementations();
-			CleanupImplementations();
 
 			EditorUtility.DisplayProgressBar(title, "Saving", 1f);
 			AssetDatabase.RemoveUnusedAssetBundleNames();
@@ -312,7 +311,7 @@ namespace Fuse.Editor
 			}
 		}
 
-		private static void ProcessLevels()
+		private static void ProcessScenes()
 		{
 			EditorUtils.PreparePath(Constants.ScenesAssetPath);
 
@@ -357,24 +356,6 @@ namespace Fuse.Editor
 				{
 					if (type.GetCustomAttributes(typeof(ImplementationAttribute), true).Length > 0)
 						SyncImplementation(type);
-				}
-			}
-		}
-
-		private static void CleanupImplementations()
-		{
-			foreach (string guid in AssetDatabase.FindAssets("t:Object"))
-			{
-				string path = AssetDatabase.GUIDToAssetPath(guid);
-				if (path.Contains(Constants.ImplementationAssetPath) && path.Contains(Constants.AssetExtension))
-				{
-					ScriptableObject reference = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
-					if (reference == null)
-					{
-						int pathCount = Constants.ImplementationAssetPath.Count(current => current == Constants.DefaultSeparator);
-						string rootPath = EditorUtils.SplitJoin(path, Constants.DefaultSeparator, pathCount + 1);
-						Directory.Delete(EditorUtils.SystemPath(rootPath), true);
-					}
 				}
 			}
 		}
