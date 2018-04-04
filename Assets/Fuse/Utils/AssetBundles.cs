@@ -40,9 +40,9 @@ namespace Fuse.Core
 
 			UnityWebRequest request;
 			if (version >= 0)
-				request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, (uint) version, 0);
+				request = UnityWebRequest.GetAssetBundle(uri.AbsoluteUri, (uint) version, 0);
 			else
-				request = UnityWebRequest.GetAssetBundle(uri.AbsolutePath, 0);
+				request = UnityWebRequest.GetAssetBundle(uri.AbsoluteUri, 0);
 
 			UnityWebRequestAsyncOperation sendRequest = request.SendWebRequest();
 			while (!sendRequest.isDone)
@@ -60,7 +60,7 @@ namespace Fuse.Core
 			if (!string.IsNullOrEmpty(request.error) || assetBundle == null)
 			{
 				if (onError != null)
-					onError("Error when loading bundle from web at: " + uri.AbsolutePath + " [" + version + "]\n" + request.error);
+					onError("Error when loading bundle from web at: " + uri.AbsoluteUri + " [" + version + "]\n" + request.error);
 
 				yield break;
 			}
@@ -117,7 +117,13 @@ namespace Fuse.Core
 			}
 #endif
 
-			AssetBundle loadedBundle = AssetBundle.GetAllLoadedAssetBundles().First(bundle => bundle.name == bundleName);
+			AssetBundle loadedBundle = null;
+			foreach (AssetBundle bundle in AssetBundle.GetAllLoadedAssetBundles())
+			{
+				if (bundle.name == bundleName)
+					loadedBundle = bundle;
+			}
+
 			if (loadedBundle == null)
 				return false;
 
@@ -135,8 +141,6 @@ namespace Fuse.Core
 		public static IEnumerator LoadAsset<T>(string path, Action<T> onComplete, Action<float> onProgress = null,
 			Action<string> onError = null) where T : Object
 		{
-			path = path.ToLower().Trim();
-
 #if UNITY_EDITOR
 			if (Simulate)
 			{

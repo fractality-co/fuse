@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using Fuse.Feature;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
@@ -41,12 +42,16 @@ namespace Fuse.Core
 			string localPath = string.Format(Constants.AssetsBakedPath, Constants.CoreBundleFile);
 			yield return AssetBundles.LoadBundle(localPath, null, null, Logger.Exception);
 
+			Logger.Info("Loaded baked core");
+
 			yield return AssetBundles.LoadAsset<Configuration>(
 				Constants.GetConfigurationAssetPath(),
 				result => { _configuration = result; },
 				null,
 				Logger.Exception
 			);
+
+			Logger.Info("Loaded configuration");
 
 			yield return AssetBundles.LoadAsset<Environment>(
 				_configuration.Environment,
@@ -55,7 +60,7 @@ namespace Fuse.Core
 				Logger.Exception
 			);
 
-			Logger.Info("Loaded core");
+			Logger.Info("Loaded environment");
 
 			if (_environment.Loading == LoadMethod.Online)
 			{
@@ -230,7 +235,7 @@ namespace Fuse.Core
 			FeatureReference reference = GetReference(feature);
 			if (reference == null)
 			{
-				reference = new FeatureReference(feature, _environment, OnEventPublished, StartAsync);
+				reference = new FeatureReference(feature, _environment, OnEventPublished, StartAsync, StopAsync);
 				_features[feature.Type].Add(reference);
 			}
 
@@ -247,6 +252,8 @@ namespace Fuse.Core
 
 		private IEnumerator SetupFeature(FeatureReference reference)
 		{
+			Logger.Info("Setting up feature: " + reference.Type + "::" + reference.Name);
+
 			yield return reference.SetLifecycle(Lifecycle.Load);
 			yield return reference.SetLifecycle(Lifecycle.Setup);
 			yield return reference.SetLifecycle(Lifecycle.Active);
@@ -254,12 +261,10 @@ namespace Fuse.Core
 
 		private IEnumerator CleanupFeature(FeatureReference reference)
 		{
+			Logger.Info("Cleaning up feature: " + reference.Type + "::" + reference.Name);
+
 			yield return reference.SetLifecycle(Lifecycle.Cleanup);
 			yield return reference.SetLifecycle(Lifecycle.Unload);
-
-			_features[reference.Type].Remove(reference);
-			if (_features[reference.Type].Count == 0)
-				_features.Remove(reference.Type);
 		}
 
 		private void OnEventPublished(string type)
@@ -274,9 +279,14 @@ namespace Fuse.Core
 			}
 		}
 
-		private void StartAsync(IEnumerator routine)
+		private void StartAsync(IEnumerator routine, Action<Coroutine> callback)
 		{
-			StartCoroutine(routine);
+			callback(StartCoroutine(routine));
+		}
+
+		private void StopAsync(Coroutine routine)
+		{
+			StopCoroutine(routine);
 		}
 
 		private class FeatureReference
@@ -305,15 +315,18 @@ namespace Fuse.Core
 			private Lifecycle _lifecycle;
 			private Object _asset;
 
+			private readonly List<Coroutine> _coroutines = new List<Coroutine>();
 			private readonly Action<string> _notify;
-			private readonly Action<IEnumerator> _async;
+			private readonly Action<IEnumerator, Action<Coroutine>> _startAsync;
+			private readonly Action<Coroutine> _stopAsync;
 			private readonly Feature _feature;
 			private readonly Environment _environment;
 
 			public FeatureReference(Feature impl, Environment env, Action<string> notify,
-				Action<IEnumerator> async)
+				Action<IEnumerator, Action<Coroutine>> startAsync, Action<Coroutine> stopAsync)
 			{
-				_async = async;
+				_stopAsync = stopAsync;
+				_startAsync = startAsync;
 				_environment = env;
 				_notify = notify;
 				_feature = impl;
@@ -346,6 +359,8 @@ namespace Fuse.Core
 					case Lifecycle.Unload:
 						ProcessInjections(lifecycle, _lifecycle);
 						ProcessListeners(false);
+						_coroutines.ForEach(_stopAsync);
+						_asset = null;
 						AssetBundles.UnloadBundle(_feature.Bundle, true);
 						break;
 				}
@@ -388,14 +403,18 @@ namespace Fuse.Core
 
 			private void ProcessListeners(bool active)
 			{
-				foreach (MemberInfo member in _asset.GetType().GetMembers())
+				foreach (MemberInfo member in GetMembers())
 				{
-					foreach (IFuseNotifier notifier in member.GetCustomAttributes(typeof(IFuseNotifier), true))
+					foreach (object attribute in member.GetCustomAttributes(true))
 					{
-						if (active)
-							notifier.AddListener(_notify);
-						else
-							notifier.RemoveListener(_notify);
+						IFuseNotifier notifier = attribute as IFuseNotifier;
+						if (notifier != null)
+						{
+							if (active)
+								notifier.AddListener(_notify);
+							else
+								notifier.RemoveListener(_notify);
+						}
 					}
 				}
 			}
@@ -403,10 +422,14 @@ namespace Fuse.Core
 			private void ProcessInjections(Lifecycle toEnter, Lifecycle toExit)
 			{
 				List<Pair<IFuseAttribute, MemberInfo>> attributes = new List<Pair<IFuseAttribute, MemberInfo>>();
-				foreach (MemberInfo member in _asset.GetType().GetMembers())
+				foreach (MemberInfo member in GetMembers())
 				{
-					foreach (object custom in member.GetCustomAttributes(typeof(IFuseAttribute), true))
-						attributes.Add(new Pair<IFuseAttribute, MemberInfo>((IFuseAttribute) custom, member));
+					foreach (object custom in member.GetCustomAttributes(true))
+					{
+						IFuseAttribute attribute = custom as IFuseAttribute;
+						if (attribute != null)
+							attributes.Add(new Pair<IFuseAttribute, MemberInfo>(attribute, member));
+					}
 				}
 
 				attributes.Sort((a, b) => a.A.Order < b.A.Order ? -1 : 1);
@@ -426,7 +449,7 @@ namespace Fuse.Core
 
 						IFuseExecutorAsync executorAsync = attribute.A as IFuseExecutorAsync;
 						if (executorAsync != null)
-							_async(executorAsync.Execute(attribute.B, _asset));
+							_startAsync(executorAsync.Execute(attribute.B, _asset), coroutine => { _coroutines.Add(coroutine); });
 					}
 
 					if (toEnter == active || toExit == active)
@@ -441,6 +464,11 @@ namespace Fuse.Core
 						}
 					}
 				}
+			}
+
+			private IEnumerable<MemberInfo> GetMembers()
+			{
+				return _asset.GetType().FindMembers(MemberTypes.All, Constants.FeatureFlags, null, null);
 			}
 		}
 
@@ -506,16 +534,20 @@ namespace Fuse.Core
 						break;
 				}
 
-				yield return SceneManager.LoadSceneAsync(Constants.GetFileNameFromPath(_path, Constants.SceneExtension));
+				yield return SceneManager.LoadSceneAsync(Constants.GetFileNameFromPath(_path, Constants.SceneExtension),
+					LoadSceneMode.Additive);
 
 				_loaded = true;
+				Logger.Info("Loaded scene: " + _path);
 			}
 
 			private IEnumerator Unload()
 			{
 				yield return SceneManager.UnloadSceneAsync(Constants.GetFileNameFromPath(_path, Constants.SceneExtension));
 				AssetBundles.UnloadBundle(Constants.GetSceneBundleFromPath(_path), true);
+
 				_loaded = false;
+				Logger.Info("Unloaded scene: " + _path);
 			}
 		}
 

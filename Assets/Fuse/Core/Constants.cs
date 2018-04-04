@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Reflection;
 using UnityEngine;
 
 namespace Fuse.Core
@@ -20,6 +21,7 @@ namespace Fuse.Core
 		public const string FeatureScriptsPath = "Assets/Scripts";
 		public const string FeatureBundle = "{0}-feature";
 		public const string FeatureBundleFile = FeatureBundle + BundleExtension;
+		public const BindingFlags FeatureFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
 		public const string ScenesAssetPath = "Assets/Bundles/Scenes";
 		public const string SceneExtension = ".unity";

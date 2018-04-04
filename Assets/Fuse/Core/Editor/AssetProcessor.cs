@@ -249,6 +249,7 @@ namespace Fuse.Editor
 			EditorSceneManager.SaveScene(scene, path);
 			SceneManager.UnloadSceneAsync(scene);
 			Selection.activeObject = AssetDatabase.LoadAssetAtPath(path, typeof(SceneAsset));
+			AssetDatabase.SaveAssets();
 
 			Logger.Info("Created new level (Scene): " + name);
 		}

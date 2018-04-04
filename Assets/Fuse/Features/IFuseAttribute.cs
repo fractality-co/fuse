@@ -52,7 +52,8 @@ namespace Fuse.Feature
 	}
 
 	/// <summary>
-	/// Represents the individual phases that a <see cref="FeatureAttribute"/> can be in. 
+	/// Represents the individual phases that a <see cref="FeatureAttribute"/> can be in.
+	/// By default, we use the Active phase.
 	/// </summary>
 	[DefaultValue(Active)]
 	public enum Lifecycle

@@ -132,7 +132,8 @@ namespace Fuse.Core
 				}
 
 				assetPath = AssetDatabase.GetAssetPath(asset);
-				if (!string.IsNullOrEmpty(assetPath) && !assetPath.Contains(reference.RequiredSubpath))
+				if (!string.IsNullOrEmpty(assetPath) && !string.IsNullOrEmpty(reference.RequiredSubpath) &&
+				    !assetPath.Contains(reference.RequiredSubpath))
 				{
 					Logger.Warn("Asset assigned does not meet required subpath: " + reference.RequiredSubpath);
 					return;

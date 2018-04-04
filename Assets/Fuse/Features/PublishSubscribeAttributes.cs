@@ -37,14 +37,20 @@ namespace Fuse.Feature
 		{
 			EventInfo eventInfo = target as EventInfo;
 			if (eventInfo != null)
-				eventInfo.AddEventHandler(instance, Notify);
+			{
+				var addMethod = eventInfo.GetAddMethod();
+				addMethod.Invoke(instance, new object[] {new EventHandler(NotifyListeners)});
+			}
 		}
 
 		public void OnExit(MemberInfo target, object instance)
 		{
 			EventInfo eventInfo = target as EventInfo;
 			if (eventInfo != null)
-				eventInfo.RemoveEventHandler(instance, Notify);
+			{
+				var removeMethod = eventInfo.GetRemoveMethod();
+				removeMethod.Invoke(instance, new object[] {new EventHandler(NotifyListeners)});
+			}
 		}
 	}
 
@@ -91,14 +97,10 @@ namespace Fuse.Feature
 	[ComVisible(false)]
 	public abstract class PublishSubscribeAttribute : Attribute, IFuseNotifier
 	{
-		protected static readonly Handler Notify = NotifyListeners;
-
 		private static readonly List<Action<string>> StateListeners = new List<Action<string>>();
 
 		private static readonly Dictionary<string, List<Pair<MemberInfo, object>>> Listeners =
 			new Dictionary<string, List<Pair<MemberInfo, object>>>();
-
-		protected delegate void Handler(string type);
 
 		private readonly string _type;
 
@@ -122,15 +124,15 @@ namespace Fuse.Feature
 			Listeners[_type].Remove(reference);
 		}
 
-		private static void NotifyListeners(string type)
+		protected void NotifyListeners(object obj, EventArgs args)
 		{
-			foreach (Pair<MemberInfo, object> reference in Listeners[type])
+			foreach (Pair<MemberInfo, object> reference in Listeners[_type])
 			{
 				if (reference.A is MethodInfo)
 					((MethodInfo) reference.A).Invoke(reference.B, null);
 			}
 
-			StateListeners.ForEach(callback => callback(type));
+			StateListeners.ForEach(callback => callback(_type));
 		}
 
 		public void AddListener(Action<string> callback)

@@ -8,6 +8,7 @@ namespace Fuse.Feature
 {
 	/// <summary>
 	/// Starts a asynchronous coroutine on a method that has a return type of <see cref="T:System.Collections.IEnumerator" />.
+	/// The coroutine is started at the <see cref="Lifecycle"/> specified, but stopped when <see cref="Feature"/> is unloaded.
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method)]
@@ -17,14 +18,14 @@ namespace Fuse.Feature
 		{
 			get;
 			[UsedImplicitly]
-			private set;
+			set;
 		}
 
 		public Lifecycle Lifecycle
 		{
 			get;
 			[UsedImplicitly]
-			private set;
+			set;
 		}
 
 		public IEnumerator Execute(MemberInfo target, object instance)

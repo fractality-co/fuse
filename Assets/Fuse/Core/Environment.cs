@@ -21,7 +21,7 @@ namespace Fuse.Core
 
 		public Uri GetUri(string filePath)
 		{
-			return new Uri(new Uri(HostUri), new Uri(filePath));
+			return new Uri(HostUri + "/" + filePath);
 		}
 
 		public int GetVersion(string bundle)

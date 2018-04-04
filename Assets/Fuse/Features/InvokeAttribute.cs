@@ -15,14 +15,14 @@ namespace Fuse.Feature
 		{
 			get;
 			[UsedImplicitly]
-			private set;
+			set;
 		}
 
 		public Lifecycle Lifecycle
 		{
 			get;
 			[UsedImplicitly]
-			private set;
+			set;
 		}
 
 		public void Execute(MemberInfo target, object instance)

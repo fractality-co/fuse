@@ -7,7 +7,7 @@ namespace Fuse.Feature
 {
 	/// <summary>
 	/// Invokes the method into the <see cref="ThreadPool"/>.
-	/// WARNING: This is advanced, make sure what you are doing is thread-safe (Unity generally is not).
+	/// WARNING: You are responsible for maintaining scope. Make sure what you are doing is thread-safe (Unity is not).
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method)]

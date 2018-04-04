@@ -74,6 +74,7 @@ namespace Fuse.Editor
 				new[]
 				{
 					implements.Count > 0 ? "using System;\n" : string.Empty,
+					implements.Contains(typeof(CoroutineAttribute)) ? "using System.Collections;" : string.Empty,
 					"using " + GetNamespaceName() + ";\n",
 					"using UnityEngine;\n",
 					"\n",
@@ -95,10 +96,14 @@ namespace Fuse.Editor
 			if (type == typeof(SubscribeAttribute))
 				param = "(\"EventType\")";
 
+			string returnValue = "void";
+			if (type == typeof(CoroutineAttribute))
+				returnValue = "IEnumerator";
+
 			return new[]
 			{
 				"	[" + name + param + "]\n" +
-				"	private void " + name + "()\n" +
+				"	private " + returnValue + " " + name + "()\n" +
 				"	{\n" +
 				"		throw new NotImplementedException();\n" +
 				"	}\n"

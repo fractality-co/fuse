@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Fuse.Core;
 using JetBrains.Annotations;
+using UnityEngine;
+using Logger = Fuse.Core.Logger;
 using Object = UnityEngine.Object;
 
 namespace Fuse.Feature
@@ -20,7 +22,7 @@ namespace Fuse.Feature
 		{
 			get;
 			[UsedImplicitly]
-			private set;
+			set;
 		}
 
 		public Lifecycle Lifecycle
@@ -30,7 +32,7 @@ namespace Fuse.Feature
 
 		private readonly Regex _regex;
 
-		public InjectAttribute(string regex = "*")
+		public InjectAttribute(string regex = ".")
 		{
 			_regex = new Regex(regex);
 		}
@@ -59,30 +61,56 @@ namespace Fuse.Feature
 
 		private object GetValue(Type valueType)
 		{
-			if (valueType.IsAssignableFrom(typeof(IList)))
+			if (typeof(IList).IsAssignableFrom(valueType))
 			{
-				Object[] values = Object.FindObjectsOfType(valueType);
-				IList value = (IList) Convert.ChangeType(Activator.CreateInstance(valueType), valueType);
-
-				if (value != null)
+				try
 				{
-					foreach (Object obj in values)
+					IList value = (IList) Convert.ChangeType(Activator.CreateInstance(valueType), valueType);
+
+					if (value == null)
+						return null;
+
+					foreach (Object obj in FindValue(HeuristicallyDetermineType(value)))
 					{
 						if (_regex.IsMatch(obj.name))
 							value.Add(obj);
 					}
+
+					return value;
 				}
-
-				return value;
+				catch (Exception)
+				{
+					// ignored
+				}
 			}
 
-			if (!valueType.IsAssignableFrom(typeof(IEnumerable)))
-			{
-				return Object.FindObjectsOfType(valueType).First(current => _regex.IsMatch(current.name));
-			}
+			if (!typeof(IEnumerable).IsAssignableFrom(valueType))
+				return FindValue(valueType).FirstOrDefault(obj => _regex.IsMatch(obj.name));
 
 			Logger.Exception(valueType.Name + " is not supported.");
 			return null;
+		}
+
+		private static Type HeuristicallyDetermineType(IList myList)
+		{
+			var enumerableType =
+				myList.GetType()
+					.GetInterfaces()
+					.Where(i => i.IsGenericType && i.GetGenericArguments().Length > 0)
+					.FirstOrDefault(i => i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+
+			if (enumerableType != null)
+				return enumerableType.GetGenericArguments()[0];
+
+			return myList.Count == 0 ? null : myList[0].GetType();
+		}
+
+		private static Object[] FindValue(Type type)
+		{
+			if (type == typeof(ScriptableObject))
+				return Resources.FindObjectsOfTypeAll(type);
+
+			return Object.FindObjectsOfType(type);
 		}
 	}
 }
