@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Fuse.Core;
-using Fuse.Implementation;
+using Fuse.Feature;
 using UnityEditor;
 using UnityEngine;
 using Logger = Fuse.Core.Logger;
@@ -14,35 +14,35 @@ namespace Fuse.Editor
 	/// </summary>
 	public class ScriptProcessor : AssetPostprocessor
 	{
-		[MenuItem("Fuse/New/Implementation %&i")]
-		public static void ShowCreateImplementationWindow()
+		[MenuItem("Fuse/New/Feature %&i")]
+		public static void ShowCreateFeatureWindow()
 		{
-			CreateImplementationWindow window = EditorWindow.GetWindow<CreateImplementationWindow>();
-			window.OnCreate += CreateImplementation<ImplementationAttribute>;
+			CreateFeatureWindow window = EditorWindow.GetWindow<CreateFeatureWindow>();
+			window.OnCreate += CreateFeature<FeatureAttribute>;
 		}
 
 		private static string GetNamespaceName()
 		{
-			return typeof(ImplementationAttribute).Namespace;
+			return typeof(FeatureAttribute).Namespace;
 		}
 
-		private static string GetImplementationType<T>() where T : ImplementationAttribute
+		private static string GetFeatureType<T>() where T : FeatureAttribute
 		{
 			return typeof(T).Name.Replace(typeof(Attribute).ToString(), string.Empty)
 				.Replace(GetNamespaceName() + ".", string.Empty).Replace(typeof(Attribute).Name, string.Empty);
 		}
 
-		private static void CreateImplementation<T>(string name, List<Type> implements) where T : ImplementationAttribute
+		private static void CreateFeature<T>(string name, List<Type> implements) where T : FeatureAttribute
 		{
 			FileTemplate template = GetTemplate<T>(name, implements);
 
-			string implementation = typeof(T).Name.Replace(typeof(Attribute).Name, string.Empty);
-			string path = Constants.ImplementationScriptsPath + "/" + implementation;
+			string feature = typeof(T).Name.Replace(typeof(Attribute).Name, string.Empty);
+			string path = Constants.FeatureScriptsPath + "/" + feature;
 			string assetPath = path + "/" + template.Filename;
 
 			if (File.Exists(assetPath))
 			{
-				Logger.Warn("Existing implementation (" + template.Filename + ") already created here.");
+				Logger.Warn("Existing feature (" + template.Filename + ") already created here.");
 				return;
 			}
 
@@ -54,20 +54,20 @@ namespace Fuse.Editor
 			Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(assetPath);
 		}
 
-		private static FileTemplate GetTemplate<T>(string name, List<Type> implements) where T : ImplementationAttribute
+		private static FileTemplate GetTemplate<T>(string name, List<Type> implements) where T : FeatureAttribute
 		{
-			List<string> allImplementations = new List<string>();
+			List<string> allFeatures = new List<string>();
 			int last = implements.Count - 1;
 			for (int i = 0; i <= last; i++)
 			{
-				foreach (string line in GetImplementation(implements[i]))
-					allImplementations.Add(line);
+				foreach (string line in GetFeature(implements[i]))
+					allFeatures.Add(line);
 
 				if (i < last)
-					allImplementations.Add("\n");
+					allFeatures.Add("\n");
 			}
 
-			string type = GetImplementationType<T>();
+			string type = GetFeatureType<T>();
 			return new FileTemplate
 			(
 				name + ".cs",
@@ -83,11 +83,11 @@ namespace Fuse.Editor
 					implements.Count > 0 ? FileTemplate.Implements + "\n" : string.Empty,
 					"}\n"
 				},
-				allImplementations.ToArray()
+				allFeatures.ToArray()
 			);
 		}
 
-		private static string[] GetImplementation(Type type)
+		private static string[] GetFeature(Type type)
 		{
 			string name = type.Name.Replace(typeof(Attribute).Name, string.Empty);
 
@@ -120,11 +120,11 @@ namespace Fuse.Editor
 					{
 						if (line.Contains(Implements))
 						{
-							if (_implementations.Length == 0)
+							if (_features.Length == 0)
 								result += line.Replace(Implements, string.Empty);
 							else
 							{
-								foreach (string implementLine in _implementations)
+								foreach (string implementLine in _features)
 									result += implementLine;
 							}
 
@@ -139,18 +139,18 @@ namespace Fuse.Editor
 			}
 
 			private readonly string[] _lines;
-			private readonly string[] _implementations;
+			private readonly string[] _features;
 
-			public FileTemplate(string filename, string[] lines, string[] implementations)
+			public FileTemplate(string filename, string[] lines, string[] features)
 			{
 				Filename = filename;
 				_lines = lines;
-				_implementations = implementations;
+				_features = features;
 			}
 		}
 	}
 
-	public class CreateImplementationWindow : EditorWindow
+	public class CreateFeatureWindow : EditorWindow
 	{
 		public Action<string, List<Type>> OnCreate;
 
@@ -167,9 +167,9 @@ namespace Fuse.Editor
 
 		private bool _showImplements = true;
 
-		public CreateImplementationWindow()
+		public CreateFeatureWindow()
 		{
-			titleContent = new GUIContent("Implementation");
+			titleContent = new GUIContent("Feature");
 			minSize = new Vector2(300, 250);
 			maxSize = new Vector2(minSize.x, 500);
 			Name = "";

@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Threading;
 using JetBrains.Annotations;
 
-namespace Fuse.Implementation
+namespace Fuse.Feature
 {
 	/// <summary>
 	/// Invokes the method into the <see cref="ThreadPool"/>.

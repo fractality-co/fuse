@@ -2,7 +2,7 @@
 using System.Reflection;
 using JetBrains.Annotations;
 
-namespace Fuse.Implementation
+namespace Fuse.Feature
 {
 	/// <summary>
 	/// Invokes a method or event when entering the <see cref="Lifecycle"/> phase.

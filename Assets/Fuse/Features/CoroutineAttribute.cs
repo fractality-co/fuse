@@ -4,7 +4,7 @@ using System.Reflection;
 using Fuse.Core;
 using JetBrains.Annotations;
 
-namespace Fuse.Implementation
+namespace Fuse.Feature
 {
 	/// <summary>
 	/// Starts a asynchronous coroutine on a method that has a return type of <see cref="T:System.Collections.IEnumerator" />.

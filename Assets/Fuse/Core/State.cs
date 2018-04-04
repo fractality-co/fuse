@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fuse.Implementation;
+using Fuse.Feature;
 using JetBrains.Annotations;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -14,7 +14,7 @@ namespace Fuse.Core
 {
 	/// <summary>
 	/// Each state operates as a state machine and a state.
-	/// Data defined here controls how <see cref="Fuse"/> should handle implementations.
+	/// Data defined here controls how <see cref="Fuse"/> should handle features.
 	/// </summary>
 	public class State : ScriptableObject
 	{
@@ -28,8 +28,8 @@ namespace Fuse.Core
 
 		public Transition[] Transitions;
 
-		[AssetReference(typeof(ScriptableObject), typeof(ImplementationAttribute))]
-		public string[] Implementations;
+		[AssetReference(typeof(ScriptableObject), typeof(FeatureAttribute))]
+		public string[] Features;
 
 #if UNITY_EDITOR
 		[AssetReference(typeof(SceneAsset), Constants.ScenesAssetPath)]
@@ -38,22 +38,22 @@ namespace Fuse.Core
 	}
 
 	[Serializable]
-	public class Implementation
+	public class Feature
 	{
 		public string BundleFile
 		{
-			get { return string.Format(Constants.ImplementationBundleFile, Type.ToLower().Trim()); }
+			get { return string.Format(Constants.FeatureBundleFile, Type.ToLower().Trim()); }
 		}
 
 		public string Bundle
 		{
-			get { return string.Format(Constants.ImplementationBundle, Type.ToLower().Trim()); }
+			get { return string.Format(Constants.FeatureBundle, Type.ToLower().Trim()); }
 		}
 
 		public readonly string Type;
 		public readonly string Name;
 
-		public Implementation(string path)
+		public Feature(string path)
 		{
 			string[] parts = path.Split(Constants.DefaultSeparator);
 			Name = parts[parts.Length - 1].Replace(Constants.AssetExtension, string.Empty);

@@ -7,7 +7,7 @@ using Fuse.Core;
 using JetBrains.Annotations;
 using Object = UnityEngine.Object;
 
-namespace Fuse.Implementation
+namespace Fuse.Feature
 {
 	/// <summary>
 	/// Assigns a dependency based on its type and is assigned before <code>"Lifecycle.Setup"</code>(s) are invoked.

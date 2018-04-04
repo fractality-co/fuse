@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
-using Fuse.Implementation;
+using Fuse.Feature;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
@@ -21,13 +21,13 @@ namespace Fuse.Core
 		private State _root;
 
 		private List<StateTransition> _transitions;
-		private Dictionary<string, List<ImplementationReference>> _implementations;
+		private Dictionary<string, List<FeatureReference>> _features;
 		private Dictionary<string, SceneReference> _scenes;
 
 		private IEnumerator Start()
 		{
 			_transitions = new List<StateTransition>();
-			_implementations = new Dictionary<string, List<ImplementationReference>>();
+			_features = new Dictionary<string, List<FeatureReference>>();
 			_scenes = new Dictionary<string, SceneReference>();
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
@@ -96,7 +96,7 @@ namespace Fuse.Core
 			AssetBundles.UnloadAllBundles(true);
 
 			_transitions = null;
-			_implementations = null;
+			_features = null;
 			_configuration = null;
 			_allStates = null;
 			_root = null;
@@ -114,8 +114,8 @@ namespace Fuse.Core
 
 			if (_root != null)
 			{
-				foreach (Implementation implementation in GetImplementations(_root))
-					RemoveImplementationReference(implementation);
+				foreach (Feature feature in GetFeatures(_root))
+					RemoveFeatureReference(feature);
 
 				foreach (string scenePath in GetScenes(_root))
 					RemoveSceneReference(scenePath);
@@ -127,17 +127,17 @@ namespace Fuse.Core
 			foreach (Transition transition in GetTransitions(_root))
 				_transitions.Add(new StateTransition(transition));
 
-			foreach (Implementation implementation in GetImplementations(_root))
-				AddImplementationReference(implementation);
+			foreach (Feature feature in GetFeatures(_root))
+				AddFeatureReference(feature);
 
 			foreach (string scenePath in GetScenes(_root))
 				AddSceneReference(scenePath);
 
-			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
+			foreach (KeyValuePair<string, List<FeatureReference>> pair in _features)
 			{
-				foreach (ImplementationReference reference in pair.Value)
+				foreach (FeatureReference reference in pair.Value)
 					if (!reference.Referenced)
-						yield return CleanupImplementation(reference);
+						yield return CleanupFeature(reference);
 			}
 
 			List<string> inactiveScenes = new List<string>();
@@ -150,11 +150,11 @@ namespace Fuse.Core
 
 			inactiveScenes.ForEach(key => _scenes.Remove(key));
 
-			foreach (KeyValuePair<string, List<ImplementationReference>> pair in _implementations)
+			foreach (KeyValuePair<string, List<FeatureReference>> pair in _features)
 			{
-				foreach (ImplementationReference reference in pair.Value)
+				foreach (FeatureReference reference in pair.Value)
 					if (!reference.Running)
-						yield return SetupImplementation(reference);
+						yield return SetupFeature(reference);
 			}
 		}
 
@@ -191,13 +191,13 @@ namespace Fuse.Core
 			return result;
 		}
 
-		private List<Implementation> GetImplementations(State state)
+		private List<Feature> GetFeatures(State state)
 		{
-			List<Implementation> result = new List<Implementation>();
+			List<Feature> result = new List<Feature>();
 
 			while (state != null)
 			{
-				result.AddRange(state.Implementations.Select(implementationPath => new Implementation(implementationPath)));
+				result.AddRange(state.Features.Select(featurePath => new Feature(featurePath)));
 				state = state.IsRoot ? null : GetState(state.Parent);
 			}
 
@@ -217,49 +217,49 @@ namespace Fuse.Core
 			_scenes[scenePath].AddReference();
 		}
 
-		private void RemoveImplementationReference(Implementation implementation)
+		private void RemoveFeatureReference(Feature feature)
 		{
-			GetReference(implementation).RemoveReference();
+			GetReference(feature).RemoveReference();
 		}
 
-		private void AddImplementationReference(Implementation implementation)
+		private void AddFeatureReference(Feature feature)
 		{
-			if (!_implementations.ContainsKey(implementation.Type))
-				_implementations[implementation.Type] = new List<ImplementationReference>();
+			if (!_features.ContainsKey(feature.Type))
+				_features[feature.Type] = new List<FeatureReference>();
 
-			ImplementationReference reference = GetReference(implementation);
+			FeatureReference reference = GetReference(feature);
 			if (reference == null)
 			{
-				reference = new ImplementationReference(implementation, _environment, OnEventPublished, StartAsync);
-				_implementations[implementation.Type].Add(reference);
+				reference = new FeatureReference(feature, _environment, OnEventPublished, StartAsync);
+				_features[feature.Type].Add(reference);
 			}
 
 			reference.AddReference();
 		}
 
-		private ImplementationReference GetReference(Implementation implementation)
+		private FeatureReference GetReference(Feature feature)
 		{
-			if (!_implementations.ContainsKey(implementation.Type))
+			if (!_features.ContainsKey(feature.Type))
 				return null;
 
-			return _implementations[implementation.Type].Find(current => current.Name == implementation.Name);
+			return _features[feature.Type].Find(current => current.Name == feature.Name);
 		}
 
-		private IEnumerator SetupImplementation(ImplementationReference reference)
+		private IEnumerator SetupFeature(FeatureReference reference)
 		{
 			yield return reference.SetLifecycle(Lifecycle.Load);
 			yield return reference.SetLifecycle(Lifecycle.Setup);
 			yield return reference.SetLifecycle(Lifecycle.Active);
 		}
 
-		private IEnumerator CleanupImplementation(ImplementationReference reference)
+		private IEnumerator CleanupFeature(FeatureReference reference)
 		{
 			yield return reference.SetLifecycle(Lifecycle.Cleanup);
 			yield return reference.SetLifecycle(Lifecycle.Unload);
 
-			_implementations[reference.Type].Remove(reference);
-			if (_implementations[reference.Type].Count == 0)
-				_implementations.Remove(reference.Type);
+			_features[reference.Type].Remove(reference);
+			if (_features[reference.Type].Count == 0)
+				_features.Remove(reference.Type);
 		}
 
 		private void OnEventPublished(string type)
@@ -279,7 +279,7 @@ namespace Fuse.Core
 			StartCoroutine(routine);
 		}
 
-		private class ImplementationReference
+		private class FeatureReference
 		{
 			public bool Referenced
 			{
@@ -288,12 +288,12 @@ namespace Fuse.Core
 
 			public string Type
 			{
-				get { return _implementation.Type; }
+				get { return _feature.Type; }
 			}
 
 			public string Name
 			{
-				get { return _implementation.Name; }
+				get { return _feature.Name; }
 			}
 
 			public bool Running
@@ -307,16 +307,16 @@ namespace Fuse.Core
 
 			private readonly Action<string> _notify;
 			private readonly Action<IEnumerator> _async;
-			private readonly Implementation _implementation;
+			private readonly Feature _feature;
 			private readonly Environment _environment;
 
-			public ImplementationReference(Implementation impl, Environment env, Action<string> notify,
+			public FeatureReference(Feature impl, Environment env, Action<string> notify,
 				Action<IEnumerator> async)
 			{
 				_async = async;
 				_environment = env;
 				_notify = notify;
-				_implementation = impl;
+				_feature = impl;
 			}
 
 			public void AddReference()
@@ -346,7 +346,7 @@ namespace Fuse.Core
 					case Lifecycle.Unload:
 						ProcessInjections(lifecycle, _lifecycle);
 						ProcessListeners(false);
-						AssetBundles.UnloadBundle(_implementation.Bundle, true);
+						AssetBundles.UnloadBundle(_feature.Bundle, true);
 						break;
 				}
 
@@ -360,7 +360,7 @@ namespace Fuse.Core
 					case LoadMethod.Baked:
 						yield return AssetBundles.LoadBundle
 						(
-							_environment.GetPath(_implementation.BundleFile),
+							_environment.GetPath(_feature.BundleFile),
 							null,
 							null,
 							Logger.Exception
@@ -369,8 +369,8 @@ namespace Fuse.Core
 					case LoadMethod.Online:
 						yield return AssetBundles.LoadBundle
 						(
-							_environment.GetUri(_implementation.BundleFile),
-							_environment.GetVersion(_implementation.Bundle),
+							_environment.GetUri(_feature.BundleFile),
+							_environment.GetVersion(_feature.Bundle),
 							null,
 							null,
 							Logger.Exception
@@ -379,8 +379,8 @@ namespace Fuse.Core
 				}
 
 				yield return AssetBundles.LoadAssets(
-					_implementation.Bundle,
-					System.Type.GetType(_implementation.Type, true, true),
+					_feature.Bundle,
+					System.Type.GetType(_feature.Type, true, true),
 					result => { _asset = result[0]; },
 					null,
 					Logger.Exception);

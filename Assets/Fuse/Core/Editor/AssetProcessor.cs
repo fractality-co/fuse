@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Fuse.Core;
-using Fuse.Implementation;
+using Fuse.Feature;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Callbacks;
@@ -272,7 +272,7 @@ namespace Fuse.Editor
 			ProcessScenes();
 
 			EditorUtility.DisplayProgressBar(title, "Processing features", 0.5f);
-			ProcessImplementations();
+			ProcessFeatures();
 
 			EditorUtility.DisplayProgressBar(title, "Saving", 1f);
 			AssetDatabase.RemoveUnusedAssetBundleNames();
@@ -346,23 +346,23 @@ namespace Fuse.Editor
 			EditorBuildSettings.scenes = baseScenes.ToArray();
 		}
 
-		private static void ProcessImplementations()
+		private static void ProcessFeatures()
 		{
-			EditorUtils.PreparePath(Constants.ImplementationAssetPath);
+			EditorUtils.PreparePath(Constants.FeatureAssetPath);
 
 			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
 			{
 				foreach (Type type in assembly.GetTypes())
 				{
-					if (type.GetCustomAttributes(typeof(ImplementationAttribute), true).Length > 0)
-						SyncImplementation(type);
+					if (type.GetCustomAttributes(typeof(FeatureAttribute), true).Length > 0)
+						SyncFeature(type);
 				}
 			}
 		}
 
-		private static void SyncImplementation(Type type)
+		private static void SyncFeature(Type type)
 		{
-			string path = Constants.ImplementationAssetPath + "/" + type.Name;
+			string path = Constants.FeatureAssetPath + "/" + type.Name;
 			if (!AssetDatabase.IsValidFolder(path))
 			{
 				string assetName = type.Name;
@@ -375,7 +375,7 @@ namespace Fuse.Editor
 					asset.name = assetName;
 					AssetDatabase.CreateAsset(asset, assetPath);
 
-					Logger.Info("Created implementation: " + assetName);
+					Logger.Info("Created feature: " + assetName);
 				}
 			}
 
@@ -383,7 +383,7 @@ namespace Fuse.Editor
 			if (importer != null)
 			{
 				string bundleName = type.Name.ToLower();
-				importer.SetAssetBundleNameAndVariant(string.Format(Constants.ImplementationBundle, bundleName),
+				importer.SetAssetBundleNameAndVariant(string.Format(Constants.FeatureBundle, bundleName),
 					string.Empty);
 			}
 		}

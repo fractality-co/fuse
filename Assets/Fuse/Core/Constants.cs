@@ -16,10 +16,10 @@ namespace Fuse.Core
 		public const string CoreBundle = "core";
 		public const string CoreBundleFile = CoreBundle + BundleExtension;
 
-		public const string ImplementationAssetPath = "Assets/Bundles/Implementations";
-		public const string ImplementationScriptsPath = "Assets/Scripts";
-		public const string ImplementationBundle = "{0}-implementation";
-		public const string ImplementationBundleFile = ImplementationBundle + BundleExtension;
+		public const string FeatureAssetPath = "Assets/Bundles/Features";
+		public const string FeatureScriptsPath = "Assets/Scripts";
+		public const string FeatureBundle = "{0}-feature";
+		public const string FeatureBundleFile = FeatureBundle + BundleExtension;
 
 		public const string ScenesAssetPath = "Assets/Bundles/Scenes";
 		public const string SceneExtension = ".unity";

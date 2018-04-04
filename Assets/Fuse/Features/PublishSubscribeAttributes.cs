@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using Fuse.Core;
 using JetBrains.Annotations;
 
-namespace Fuse.Implementation
+namespace Fuse.Feature
 {
 	/// <summary>
 	/// Adds hook to an <code>event</code> defined, that will call <see cref="SubscribeAttribute"/> with corresponding type."/>

@@ -3,7 +3,7 @@ using System.Collections;
 using System.ComponentModel;
 using System.Reflection;
 
-namespace Fuse.Implementation
+namespace Fuse.Feature
 {
 	/// <summary>
 	/// Base interface that <see cref="Fuse"/> uses to mark attributes for processing within a specific <see cref="Lifecycle"/>.
@@ -42,7 +42,7 @@ namespace Fuse.Implementation
 	}
 
 	/// <summary>
-	/// <see cref="N:Fuse" /> invokes the attribute when enterring or exitting the assigned <see cref="T:Fuse.Implementation.Lifecycle" />.
+	/// <see cref="N:Fuse" /> invokes the attribute when enterring or exitting the assigned <see cref="T:Fuse.Feature.Lifecycle" />.
 	/// </summary>
 	/// <inheritdoc />
 	public interface IFuseLifecycle : IFuseAttribute
@@ -52,7 +52,7 @@ namespace Fuse.Implementation
 	}
 
 	/// <summary>
-	/// Represents the individual phases that a <see cref="ImplementationAttribute"/> can be in. 
+	/// Represents the individual phases that a <see cref="FeatureAttribute"/> can be in. 
 	/// </summary>
 	[DefaultValue(Active)]
 	public enum Lifecycle
