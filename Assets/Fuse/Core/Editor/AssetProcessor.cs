@@ -200,7 +200,7 @@ namespace Fuse.Editor
 				if (((IList) bundleNames).Contains(fileInfo.Name))
 					File.Move(fileInfo.FullName, fileInfo.FullName + Constants.BundleExtension);
 
-			Debug.Log("Built assets for: " + EditorUserBuildSettings.activeBuildTarget);
+			Debug.Log("Built assets for: " + Constants.GetPlatformName(EditorUserBuildSettings.activeBuildTarget));
 		}
 
 		private static string GetAssetIntegration()
@@ -211,7 +211,7 @@ namespace Fuse.Editor
 		private static string GetAssetOutput()
 		{
 			return (Constants.EditorBundlePath + Constants.DefaultSeparator +
-			        EditorUserBuildSettings.activeBuildTarget)
+			        Constants.GetPlatformName(EditorUserBuildSettings.activeBuildTarget))
 				.Replace(Constants.DefaultSeparator, Path.DirectorySeparatorChar);
 		}
 

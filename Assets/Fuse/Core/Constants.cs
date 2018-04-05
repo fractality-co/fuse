@@ -1,6 +1,11 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Fuse.Core
 {
@@ -55,6 +60,23 @@ namespace Fuse.Core
 			string subPath = path.Replace(ScenesAssetPath + DefaultSeparator, string.Empty);
 			return subPath.ToLower().Replace(" ", string.Empty).Replace(SceneExtension, string.Empty)
 				.Replace(DefaultSeparator, '_');
+		}
+
+#if UNITY_EDITOR
+		public static string GetPlatformName(BuildTarget buildTarget)
+		{
+			return GetPlatformName(buildTarget.ToRuntimePlatform());
+		}
+#endif
+
+		public static string GetPlatformName(RuntimePlatform platform)
+		{
+			return Strip(platform.ToString(), new[] {"Player", "Editor", "X86", "X64", "ARM"}).ToLower();
+		}
+
+		private static string Strip(string value, IEnumerable<string> toStrip)
+		{
+			return toStrip.Aggregate(value, (current, strip) => current.Replace(strip, string.Empty));
 		}
 
 		public static string GetConfigurationAssetName()

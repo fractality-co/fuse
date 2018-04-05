@@ -67,7 +67,7 @@ namespace Fuse.Core
 			if (_environment.Loading == LoadMethod.Online)
 			{
 				yield return AssetBundles.UnloadBundle(Constants.CoreBundle, false);
-				yield return AssetBundles.LoadBundle(_environment.GetUri(Constants.CoreBundleFile), -1, null, null,
+				yield return AssetBundles.LoadBundle(_environment.GetUri(Constants.CoreBundleFile, true), -1, null, null,
 					Logger.Exception);
 
 				yield return AssetBundles.LoadAsset<Configuration>(
@@ -421,7 +421,7 @@ namespace Fuse.Core
 					case LoadMethod.Online:
 						yield return AssetBundles.LoadBundle
 						(
-							_environment.GetUri(_feature.BundleFile),
+							_environment.GetUri(_feature.BundleFile, true),
 							_environment.GetVersion(_feature.Bundle),
 							null,
 							null,
@@ -562,7 +562,7 @@ namespace Fuse.Core
 					case LoadMethod.Online:
 						yield return AssetBundles.LoadBundle
 						(
-							_environment.GetUri(Constants.GetSceneBundleFileFromPath(_path)),
+							_environment.GetUri(Constants.GetSceneBundleFileFromPath(_path), true),
 							_environment.GetVersion(Constants.GetSceneBundleFromPath(_path)),
 							null,
 							null,
