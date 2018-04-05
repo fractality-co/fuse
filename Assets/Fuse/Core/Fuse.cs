@@ -24,12 +24,14 @@ namespace Fuse.Core
 		private List<StateTransition> _transitions;
 		private Dictionary<string, List<FeatureReference>> _features;
 		private Dictionary<string, SceneReference> _scenes;
+		private List<SceneReference> _loading;
 
 		private IEnumerator Start()
 		{
 			_transitions = new List<StateTransition>();
 			_features = new Dictionary<string, List<FeatureReference>>();
 			_scenes = new Dictionary<string, SceneReference>();
+			_loading = new List<SceneReference>();
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
 			Logger.Enabled = true;
@@ -98,13 +100,15 @@ namespace Fuse.Core
 
 		private void OnApplicationQuit()
 		{
-			AssetBundles.UnloadAllBundles(true);
+			StopAllCoroutines();
 
 			_transitions = null;
 			_features = null;
 			_configuration = null;
 			_allStates = null;
 			_root = null;
+
+			AssetBundles.UnloadAllBundles(true);
 
 			Logger.Info("Stopped");
 		}
@@ -127,6 +131,16 @@ namespace Fuse.Core
 			}
 
 			_root = GetState(state);
+
+			foreach (string loadingPath in GetLoading(_root))
+			{
+				SceneReference loading = new SceneReference(loadingPath, _environment);
+				loading.AddReference();
+
+				yield return loading.Process();
+
+				_loading.Add(loading);
+			}
 
 			_transitions.Clear();
 			foreach (Transition transition in GetTransitions(_root))
@@ -161,6 +175,14 @@ namespace Fuse.Core
 					if (!reference.Running)
 						yield return SetupFeature(reference);
 			}
+
+			foreach (SceneReference loading in _loading)
+			{
+				loading.RemoveReference();
+				yield return loading.Process();
+			}
+
+			_loading.Clear();
 		}
 
 		private State GetState(string state)
@@ -190,6 +212,21 @@ namespace Fuse.Core
 			while (state != null)
 			{
 				result.AddRange(state.Scenes);
+				state = state.IsRoot ? null : GetState(state.Parent);
+			}
+
+			return result;
+		}
+
+		private List<string> GetLoading(State state)
+		{
+			List<string> result = new List<string>();
+
+			while (state != null)
+			{
+				if (!string.IsNullOrEmpty(state.Loading))
+					result.Add(state.Loading);
+
 				state = state.IsRoot ? null : GetState(state.Parent);
 			}
 

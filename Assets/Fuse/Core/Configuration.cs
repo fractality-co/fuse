@@ -7,10 +7,10 @@ namespace Fuse.Core
 	/// </summary>
 	public class Configuration : ScriptableObject
 	{
-		[AssetReference(typeof(State))]
+		[AssetReference(typeof(State), Constants.CoreAssetPath)]
 		public string Start;
 
-		[AssetReference(typeof(Environment))]
+		[AssetReference(typeof(Environment), Constants.CoreAssetPath)]
 		public string Environment;
 	}
 }
