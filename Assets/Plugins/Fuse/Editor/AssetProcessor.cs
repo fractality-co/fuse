@@ -128,7 +128,7 @@ namespace Fuse.Editor
 		private static void IntegrateAssets()
 		{
 			RemoveIntegratedAssets();
-			EditorUtils.PreparePath(Constants.AssetsBakedEditorPath);
+			PathUtils.PreparePath(Constants.AssetsBakedEditorPath);
 
 			Configuration configuration = AssetDatabase.LoadAssetAtPath<Configuration>(Constants.GetConfigurationAssetPath());
 			Environment environment = AssetDatabase.LoadAssetAtPath<Environment>(configuration.Environment);
@@ -141,7 +141,7 @@ namespace Fuse.Editor
 
 			if (environment.Loading == LoadMethod.Baked)
 			{
-				EditorUtils.DirectoryCopy(GetAssetOutput(), GetAssetIntegration(), true);
+				PathUtils.DirectoryCopy(GetAssetOutput(), GetAssetIntegration(), true);
 			}
 			else
 			{
@@ -205,7 +205,7 @@ namespace Fuse.Editor
 
 		private static string GetAssetIntegration()
 		{
-			return EditorUtils.SystemPath(Constants.AssetsBakedEditorPath);
+			return PathUtils.SystemPath(Constants.AssetsBakedEditorPath);
 		}
 
 		private static string GetAssetOutput()
@@ -285,17 +285,13 @@ namespace Fuse.Editor
 
 		private static void ProcessCore()
 		{
-			EditorUtils.PreparePath(Constants.CoreAssetPath);
-			EditorUtils.PreparePath(Constants.StatesAssetPath);
-			EditorUtils.PreparePath(Constants.EnvironmentsAssetPath);
-
-			AssetImporter importer = AssetImporter.GetAtPath(Constants.CoreAssetPath);
-			if (importer != null)
-				importer.SetAssetBundleNameAndVariant(Constants.CoreBundle, string.Empty);
-
 			Configuration config = AssetDatabase.LoadAssetAtPath<Configuration>(Constants.GetConfigurationAssetPath());
 			if (config == null)
 			{
+				PathUtils.PreparePath(Constants.CoreAssetPath);
+				PathUtils.PreparePath(Constants.StatesAssetPath);
+				PathUtils.PreparePath(Constants.EnvironmentsAssetPath);
+
 				const string envDefaultName = "Default";
 				CreateEnvironmentAsset(envDefaultName);
 
@@ -310,11 +306,15 @@ namespace Fuse.Editor
 				               Constants.AssetExtension;
 				AssetDatabase.CreateAsset(config, Constants.GetConfigurationAssetPath());
 			}
+			
+			AssetImporter importer = AssetImporter.GetAtPath(Constants.CoreAssetPath);
+			if (importer != null)
+				importer.SetAssetBundleNameAndVariant(Constants.CoreBundle, string.Empty);
 		}
 
 		private static void ProcessScenes()
 		{
-			EditorUtils.PreparePath(Constants.ScenesAssetPath);
+			PathUtils.PreparePath(Constants.ScenesAssetPath);
 
 			List<EditorBuildSettingsScene> baseScenes = EditorBuildSettings.scenes.ToList();
 			List<EditorBuildSettingsScene> scenes = new List<EditorBuildSettingsScene>();
@@ -349,7 +349,7 @@ namespace Fuse.Editor
 
 		private static void ProcessFeatures()
 		{
-			EditorUtils.PreparePath(Constants.FeatureAssetPath);
+			PathUtils.PreparePath(Constants.FeatureAssetPath);
 
 			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
 			{
@@ -371,7 +371,7 @@ namespace Fuse.Editor
 				ScriptableObject asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath);
 				if (asset == null)
 				{
-					EditorUtils.PreparePath(path);
+					PathUtils.PreparePath(path);
 					asset = ScriptableObject.CreateInstance(type);
 					asset.name = assetName;
 					AssetDatabase.CreateAsset(asset, assetPath);

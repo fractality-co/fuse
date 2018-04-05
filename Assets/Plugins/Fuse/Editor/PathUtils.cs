@@ -1,12 +1,11 @@
 ﻿using System.IO;
-using UnityEditor;
 
 namespace Fuse.Editor
 {
 	/// <summary>
 	/// Helper class for condolidating common Editor actions.
 	/// </summary>
-	public static class EditorUtils
+	public static class PathUtils
 	{
 		public static string SystemPath(string path)
 		{
@@ -19,21 +18,12 @@ namespace Fuse.Editor
 			string parent = string.Empty;
 			for (int i = 0; i <= directories.Length - 1; i++)
 			{
-				string current = directories[i];
-				string next = parent == string.Empty ? current : parent + "/" + current;
-				if (!AssetDatabase.IsValidFolder(next))
-					AssetDatabase.CreateFolder(parent, current);
+				string next = parent == string.Empty ? directories[i] : parent + Path.DirectorySeparatorChar + directories[i];
+				if (!Directory.Exists(next))
+					Directory.CreateDirectory(next);
+
 				parent = next;
 			}
-		}
-
-		public static string SplitJoin(string value, char delimiter, int count)
-		{
-			string result = string.Empty;
-			string[] values = value.Split(delimiter);
-			for (int i = 0; i <= count - 1; i++)
-				result += values[i] + (i <= count - 1 ? delimiter.ToString() : string.Empty);
-			return result;
 		}
 
 		public static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)

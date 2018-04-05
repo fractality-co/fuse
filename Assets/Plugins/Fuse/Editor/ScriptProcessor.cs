@@ -46,7 +46,7 @@ namespace Fuse.Editor
 				return;
 			}
 
-			EditorUtils.PreparePath(path);
+			PathUtils.PreparePath(path);
 			File.WriteAllText(assetPath, template.Content);
 			AssetDatabase.ImportAsset(assetPath);
 			AssetDatabase.SaveAssets();
