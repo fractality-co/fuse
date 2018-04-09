@@ -38,7 +38,7 @@ namespace Fuse.Feature
 			EventInfo eventInfo = target as EventInfo;
 			if (eventInfo != null)
 			{
-				var addMethod = eventInfo.GetAddMethod();
+				MethodInfo addMethod = eventInfo.GetAddMethod(true) ?? eventInfo.GetAddMethod(false);
 				addMethod.Invoke(instance, new object[] {new EventHandler(NotifyListeners)});
 			}
 		}
@@ -48,7 +48,7 @@ namespace Fuse.Feature
 			EventInfo eventInfo = target as EventInfo;
 			if (eventInfo != null)
 			{
-				var removeMethod = eventInfo.GetRemoveMethod();
+				MethodInfo removeMethod = eventInfo.GetRemoveMethod(true) ?? eventInfo.GetRemoveMethod(false);
 				removeMethod.Invoke(instance, new object[] {new EventHandler(NotifyListeners)});
 			}
 		}
