@@ -473,10 +473,18 @@ namespace Fuse.Core
 
 				foreach (Pair<IFuseAttribute, MemberInfo> attribute in attributes)
 				{
-					// we have a custom default value
 					Lifecycle active = attribute.A.Lifecycle;
 					if (active == Lifecycle.None)
-						active = (Lifecycle) ((DefaultValueAttribute) active.GetType().GetCustomAttributes(true)[0]).Value;
+					{
+						object[] possibleDefaults = attribute.A.GetType().GetCustomAttributes(typeof(DefaultLifecycleAttribute), true);
+						if (possibleDefaults.Length > 0)
+						{
+							DefaultLifecycleAttribute defaultLifecycle = (DefaultLifecycleAttribute) possibleDefaults[0];
+							active = defaultLifecycle.Lifecycle;
+						}
+						else
+							active = (Lifecycle) ((DefaultValueAttribute) active.GetType().GetCustomAttributes(true)[0]).Value;
+					}
 
 					if (toEnter == active)
 					{

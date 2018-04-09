@@ -12,10 +12,12 @@ using Object = UnityEngine.Object;
 namespace Fuse.Feature
 {
 	/// <summary>
-	/// Assigns a dependency based on its type and is assigned before <code>"Lifecycle.Setup"</code>(s) are invoked.
+	/// Assigns a dependency based on its type.
+	/// By default, this executes on the Load <see cref="Lifecycle"/>.
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
+	[DefaultLifecycle(Lifecycle.Load)]
 	public sealed class InjectAttribute : Attribute, IFuseExecutor
 	{
 		public uint Order
@@ -27,7 +29,9 @@ namespace Fuse.Feature
 
 		public Lifecycle Lifecycle
 		{
-			get { return Lifecycle.Load; }
+			get;
+			[UsedImplicitly]
+			set;
 		}
 
 		private readonly Regex _regex;

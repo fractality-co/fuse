@@ -6,9 +6,11 @@ namespace Fuse.Feature
 {
 	/// <summary>
 	/// Invokes a method or event when entering the <see cref="Lifecycle"/> phase.
+	/// By default, this executes on the Active <see cref="Lifecycle"/>.
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method | AttributeTargets.Event)]
+	[DefaultLifecycle(Lifecycle.Active)]
 	public sealed class InvokeAttribute : Attribute, IFuseExecutor
 	{
 		public uint Order

@@ -12,6 +12,7 @@ namespace Fuse.Feature
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Method)]
+	[DefaultLifecycle(Lifecycle.Active)]
 	public sealed class CoroutineAttribute : Attribute, IFuseExecutorAsync
 	{
 		public uint Order

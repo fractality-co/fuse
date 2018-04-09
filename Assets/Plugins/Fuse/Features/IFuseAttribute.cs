@@ -51,11 +51,21 @@ namespace Fuse.Feature
 		void OnExit(MemberInfo target, object instance);
 	}
 
+	[AttributeUsage(AttributeTargets.Class)]
+	public class DefaultLifecycleAttribute : Attribute
+	{
+		public readonly Lifecycle Lifecycle;
+
+		public DefaultLifecycleAttribute(Lifecycle lifecycle)
+		{
+			Lifecycle = lifecycle;
+		}
+	}
+
 	/// <summary>
 	/// Represents the individual phases that a <see cref="FeatureAttribute"/> can be in.
-	/// By default, we use the Active phase.
+	/// To set a default Lifecycle, tag your attribute with <see cref="DefaultLifecycleAttribute"/>.
 	/// </summary>
-	[DefaultValue(Active)]
 	public enum Lifecycle
 	{
 		None,
