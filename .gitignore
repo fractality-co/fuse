@@ -42,3 +42,5 @@ Assets/AssetStoreTools*
 StreamingAssets**
 Assets/Scripts**
 ProjectSettings/EditorBuildSettings.asset
+InputManager.asset
+EditorBuildSettings.asset

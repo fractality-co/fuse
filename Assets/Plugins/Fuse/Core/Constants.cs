@@ -22,6 +22,7 @@ namespace Fuse.Core
 		public const string CoreBundle = "core";
 		public const string CoreBundleFile = CoreBundle + BundleExtension;
 
+		public const int FeatureFolderDepth = 4;
 		public const string FeatureAssetPath = "Assets/Bundles/Features";
 		public const string FeatureScriptsPath = "Assets/Scripts";
 		public const string FeatureBundle = "{0}-feature";

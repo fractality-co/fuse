@@ -63,7 +63,7 @@ namespace Fuse.Core
 		{
 			string[] parts = path.Split(Constants.DefaultSeparator);
 			Name = parts[parts.Length - 1].Replace(Constants.AssetExtension, string.Empty);
-			Type = parts[parts.Length - 2];
+			Type = parts[Constants.FeatureFolderDepth - 1];
 		}
 	}
 

@@ -432,7 +432,7 @@ namespace Fuse.Core
 
 				yield return AssetBundles.LoadAssets(
 					_feature.Bundle,
-					System.Type.GetType(_feature.Type, true, true),
+					FindType(_feature.Type),
 					result => { _asset = result[0]; },
 					null,
 					Logger.Exception);
@@ -514,6 +514,22 @@ namespace Fuse.Core
 			private IEnumerable<MemberInfo> GetMembers()
 			{
 				return _asset.GetType().FindMembers(MemberTypes.All, Constants.FeatureFlags, null, null);
+			}
+			
+			private static Type FindType(string qualifiedTypeName)
+			{
+				Type t = System.Type.GetType(qualifiedTypeName, false, true);
+				if (t != null)
+					return t;
+
+				foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+				{
+					t = asm.GetType(qualifiedTypeName);
+					if (t != null)
+						return t;
+				}
+				
+				return null;
 			}
 		}
 
