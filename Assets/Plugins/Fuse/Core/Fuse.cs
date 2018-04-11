@@ -183,6 +183,15 @@ namespace Fuse.Core
 			}
 
 			_loading.Clear();
+
+			foreach (StateTransition transition in _transitions)
+			{
+				if (transition.Transition)
+				{
+					yield return SetState(transition.State);
+					break;
+				}
+			}
 		}
 
 		private State GetState(string state)
@@ -515,7 +524,7 @@ namespace Fuse.Core
 			{
 				return _asset.GetType().FindMembers(MemberTypes.All, Constants.FeatureFlags, null, null);
 			}
-			
+
 			private static Type FindType(string qualifiedTypeName)
 			{
 				Type t = System.Type.GetType(qualifiedTypeName, false, true);
@@ -528,7 +537,7 @@ namespace Fuse.Core
 					if (t != null)
 						return t;
 				}
-				
+
 				return null;
 			}
 		}
@@ -616,6 +625,11 @@ namespace Fuse.Core
 		{
 			private readonly List<string> _events;
 
+			public bool Transition
+			{
+				get { return _events.Count == 0; }
+			}
+
 			public string State { get; private set; }
 
 			public StateTransition(Transition transition)
@@ -629,7 +643,7 @@ namespace Fuse.Core
 				int index = _events.IndexOf(type);
 				if (index >= 0)
 					_events.RemoveAt(index);
-				return _events.Count == 0;
+				return Transition;
 			}
 		}
 	}
