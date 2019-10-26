@@ -35,12 +35,6 @@ namespace Fuse.Core
 		[AssetReference(typeof(SceneAsset), Constants.ScenesAssetPath)]
 #endif
 		public string[] Scenes;
-		
-#if UNITY_EDITOR
-		[AssetReference(typeof(SceneAsset), Constants.ScenesAssetPath)]
-#endif
-		[Tooltip("If specified, we will add and remove this scene when transitioning and loading to a state.")]
-		public string Loading;
 	}
 
 	[Serializable]

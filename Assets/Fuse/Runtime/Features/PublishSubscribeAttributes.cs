@@ -4,12 +4,14 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Fuse.Core;
 using JetBrains.Annotations;
+using UnityEditor.Callbacks;
 
 namespace Fuse.Feature
 {
 	/// <summary>
 	/// Adds hook to an <code>event</code> defined, that will call <see cref="SubscribeAttribute"/> with corresponding type."/>
 	/// Events are only processed while in the Active phase of the <see cref="Lifecycle"/>.
+	/// Requires a type of <see cref="EventHandler"/>, and when invoking pass (this, EventArgs.empty).
 	/// </summary>
 	[MeansImplicitUse]
 	[AttributeUsage(AttributeTargets.Event)]
@@ -98,9 +100,7 @@ namespace Fuse.Feature
 	public abstract class PublishSubscribeAttribute : Attribute, IFuseNotifier
 	{
 		private static readonly List<Action<string>> StateListeners = new List<Action<string>>();
-
-		private static readonly Dictionary<string, List<Pair<MemberInfo, object>>> Listeners =
-			new Dictionary<string, List<Pair<MemberInfo, object>>>();
+		private static readonly Dictionary<string, List<Pair<MemberInfo, object>>> Listeners =  new Dictionary<string, List<Pair<MemberInfo, object>>>();
 
 		private readonly string _type;
 

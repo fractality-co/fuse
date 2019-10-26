@@ -1,0 +1,8 @@
+{
+    "name": "Fuse.Editor",
+    "references": [
+        "Fuse.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": []
+}

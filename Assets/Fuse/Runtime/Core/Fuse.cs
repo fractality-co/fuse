@@ -16,34 +16,25 @@ namespace Fuse.Core
 	/// </summary>
 	public class Fuse : SingletonBehaviour<Fuse>
 	{
-		private Environment _environment;
-		private Configuration _configuration;
 		private List<State> _allStates;
-		private State _root;
-
 		private List<StateTransition> _transitions;
 		private Dictionary<string, List<FeatureReference>> _features;
 		private Dictionary<string, SceneReference> _scenes;
-		private List<SceneReference> _loading;
+		private Configuration _configuration;
+		private Environment _environment;
+		private State _state;
 
 		private IEnumerator Start()
 		{
 			_transitions = new List<StateTransition>();
 			_features = new Dictionary<string, List<FeatureReference>>();
 			_scenes = new Dictionary<string, SceneReference>();
-			_loading = new List<SceneReference>();
 
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
-			Logger.Enabled = true;
-#else
-			Logger.Enabled = false;
-#endif
-
+			Logger.Enabled = Debug.isDebugBuild;
 			Logger.Info("Starting ...");
 
 			string localPath = string.Format(Constants.AssetsBakedPath, Constants.CoreBundleFile);
 			yield return AssetBundles.LoadBundle(localPath, null, null, Logger.Exception);
-
 			Logger.Info("Loaded baked core");
 
 			yield return AssetBundles.LoadAsset<Configuration>(
@@ -52,7 +43,6 @@ namespace Fuse.Core
 				null,
 				Logger.Exception
 			);
-
 			Logger.Info("Loaded configuration");
 
 			yield return AssetBundles.LoadAsset<Environment>(
@@ -61,7 +51,6 @@ namespace Fuse.Core
 				null,
 				Logger.Exception
 			);
-
 			Logger.Info("Loaded environment");
 
 			if (_environment.Loading == LoadMethod.Online)
@@ -83,7 +72,6 @@ namespace Fuse.Core
 					null,
 					Logger.Exception
 				);
-
 				Logger.Info("Updated core from remote source");
 			}
 
@@ -92,9 +80,7 @@ namespace Fuse.Core
 				result => { _allStates = result; },
 				null,
 				Logger.Exception);
-
 			yield return SetState(_configuration.Start);
-
 			Logger.Info("Started");
 		}
 
@@ -106,7 +92,7 @@ namespace Fuse.Core
 			_features = null;
 			_configuration = null;
 			_allStates = null;
-			_root = null;
+			_state = null;
 
 			AssetBundles.UnloadAllBundles(true);
 
@@ -115,48 +101,46 @@ namespace Fuse.Core
 
 		private IEnumerator SetState(string state)
 		{
+			Logger.Info("Setting state: " + state);
+			
 			if (string.IsNullOrEmpty(state))
 			{
 				Logger.Exception("You must have a valid initial state set in your " + typeof(Configuration).Name);
 				yield break;
 			}
 
-			if (_root != null)
+			if (_state != null)
 			{
-				foreach (Feature feature in GetFeatures(_root))
+				foreach (Feature feature in GetFeatures(_state))
 					RemoveFeatureReference(feature);
 
-				foreach (string scenePath in GetScenes(_root))
+				foreach (string scenePath in GetScenes(_state))
 					RemoveSceneReference(scenePath);
 			}
 
-			_root = GetState(state);
-
-			foreach (string loadingPath in GetLoading(_root))
-			{
-				SceneReference loading = new SceneReference(loadingPath, _environment);
-				loading.AddReference();
-
-				yield return loading.Process();
-
-				_loading.Add(loading);
-			}
+			_state = GetState(state);
 
 			_transitions.Clear();
-			foreach (Transition transition in GetTransitions(_root))
+			foreach (Transition transition in GetTransitions(_state))
 				_transitions.Add(new StateTransition(transition));
 
-			foreach (Feature feature in GetFeatures(_root))
+			foreach (Feature feature in GetFeatures(_state))
 				AddFeatureReference(feature);
 
-			foreach (string scenePath in GetScenes(_root))
+			foreach (string scenePath in GetScenes(_state))
 				AddSceneReference(scenePath);
-
+			
 			foreach (KeyValuePair<string, List<FeatureReference>> pair in _features)
 			{
-				foreach (FeatureReference reference in pair.Value)
+				for (var i = 0; i < pair.Value.Count; i++)
+				{
+					FeatureReference reference = pair.Value[i];
 					if (!reference.Referenced)
+					{
 						yield return CleanupFeature(reference);
+						pair.Value.RemoveAt(i);
+					}
+				}
 			}
 
 			List<string> inactiveScenes = new List<string>();
@@ -166,7 +150,6 @@ namespace Fuse.Core
 				if (!pair.Value.Active)
 					inactiveScenes.Add(pair.Key);
 			}
-
 			inactiveScenes.ForEach(key => _scenes.Remove(key));
 
 			foreach (KeyValuePair<string, List<FeatureReference>> pair in _features)
@@ -176,24 +159,19 @@ namespace Fuse.Core
 						yield return SetupFeature(reference);
 			}
 
-			foreach (SceneReference loading in _loading)
-			{
-				loading.RemoveReference();
-				yield return loading.Process();
-			}
-
-			_loading.Clear();
-
 			foreach (StateTransition transition in _transitions)
 			{
 				if (transition.Transition)
 				{
 					yield return SetState(transition.State);
-					break;
+					yield break;
 				}
 			}
+
+			Logger.Info("Set state: " + state);
 		}
 
+		// TODO: we should not need to parse it in this manner
 		private State GetState(string state)
 		{
 			string[] values = state.Split(Constants.DefaultSeparator);
@@ -227,21 +205,6 @@ namespace Fuse.Core
 			return result;
 		}
 
-		private List<string> GetLoading(State state)
-		{
-			List<string> result = new List<string>();
-
-			while (state != null)
-			{
-				if (!string.IsNullOrEmpty(state.Loading))
-					result.Add(state.Loading);
-
-				state = state.IsRoot ? null : GetState(state.Parent);
-			}
-
-			return result;
-		}
-
 		private List<Feature> GetFeatures(State state)
 		{
 			List<Feature> result = new List<Feature>();
@@ -255,9 +218,12 @@ namespace Fuse.Core
 			return result;
 		}
 
-		private void RemoveSceneReference(string scenePath)
+		private FeatureReference GetReference(Feature feature)
 		{
-			_scenes[scenePath].RemoveReference();
+			if (!_features.ContainsKey(feature.Type))
+				return null;
+
+			return _features[feature.Type].Find(current => current.Name == feature.Name);
 		}
 
 		private void AddSceneReference(string scenePath)
@@ -268,9 +234,9 @@ namespace Fuse.Core
 			_scenes[scenePath].AddReference();
 		}
 
-		private void RemoveFeatureReference(Feature feature)
+		private void RemoveSceneReference(string scenePath)
 		{
-			GetReference(feature).RemoveReference();
+			_scenes[scenePath].RemoveReference();
 		}
 
 		private void AddFeatureReference(Feature feature)
@@ -281,19 +247,16 @@ namespace Fuse.Core
 			FeatureReference reference = GetReference(feature);
 			if (reference == null)
 			{
-				reference = new FeatureReference(feature, _environment, OnEventPublished, StartAsync, StopAsync);
+				reference = new FeatureReference(feature, _environment, OnEventPublished, (rt,cb) => cb(StartCoroutine(rt)), StopCoroutine);
 				_features[feature.Type].Add(reference);
 			}
 
 			reference.AddReference();
 		}
 
-		private FeatureReference GetReference(Feature feature)
+		private void RemoveFeatureReference(Feature feature)
 		{
-			if (!_features.ContainsKey(feature.Type))
-				return null;
-
-			return _features[feature.Type].Find(current => current.Name == feature.Name);
+			GetReference(feature).RemoveReference();
 		}
 
 		private IEnumerator SetupFeature(FeatureReference reference)
@@ -325,16 +288,6 @@ namespace Fuse.Core
 			}
 		}
 
-		private void StartAsync(IEnumerator routine, Action<Coroutine> callback)
-		{
-			callback(StartCoroutine(routine));
-		}
-
-		private void StopAsync(Coroutine routine)
-		{
-			StopCoroutine(routine);
-		}
-
 		private class FeatureReference
 		{
 			public bool Referenced
@@ -356,7 +309,7 @@ namespace Fuse.Core
 			{
 				get { return _lifecycle != Lifecycle.None; }
 			}
-
+			
 			private uint _count;
 			private Lifecycle _lifecycle;
 			private Object _asset;
@@ -408,9 +361,10 @@ namespace Fuse.Core
 						_coroutines.ForEach(_stopAsync);
 						_asset = null;
 						AssetBundles.UnloadBundle(_feature.Bundle, true);
-						break;
+						_lifecycle = Lifecycle.None;
+						yield break;
 				}
-
+				
 				_lifecycle = lifecycle;
 			}
 

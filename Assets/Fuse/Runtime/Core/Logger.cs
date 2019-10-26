@@ -37,12 +37,6 @@ namespace Fuse.Core
 
 		public static void Exception(string message)
 		{
-#if UNITY_EDITOR
-			if (EditorApplication.isPlaying)
-				EditorApplication.isPaused = true;
-#else
-			Application.Quit();
-#endif
 			throw new Exception(Format(message));
 		}
 
