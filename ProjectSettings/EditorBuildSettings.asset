@@ -8,6 +8,4 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Fuse/Scenes/Main.unity
     guid: 8208d30594037c043ab6c05990bdfd07
-  - enabled: 1
-    path: Assets/Bundles/Scenes/Game.unity
-    guid: 18c6cf1c5e75844f9bca821903c2e762
+  m_configObjects: {}

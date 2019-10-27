@@ -40,9 +40,9 @@ namespace Fuse.Core
 
 			UnityWebRequest request;
 			if (version >= 0)
-				request = UnityWebRequest.GetAssetBundle(uri.AbsoluteUri, (uint) version, 0);
+				request = UnityWebRequestAssetBundle.GetAssetBundle(uri.AbsoluteUri, (uint) version, 0);
 			else
-				request = UnityWebRequest.GetAssetBundle(uri.AbsoluteUri, 0);
+				request = UnityWebRequestAssetBundle.GetAssetBundle(uri.AbsoluteUri, 0);
 
 			UnityWebRequestAsyncOperation sendRequest = request.SendWebRequest();
 			while (!sendRequest.isDone)
