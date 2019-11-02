@@ -129,28 +129,38 @@ namespace Fuse.Core
 
 			foreach (string scenePath in GetScenes(_state))
 				AddSceneReference(scenePath);
-			
+
+			var referencesToRemove = new Dictionary<string, FeatureReference>();
 			foreach (KeyValuePair<string, List<FeatureReference>> pair in _features)
 			{
 				for (var i = 0; i < pair.Value.Count; i++)
 				{
 					FeatureReference reference = pair.Value[i];
 					if (!reference.Referenced)
-					{
-						yield return CleanupFeature(reference);
-						pair.Value.RemoveAt(i);
-					}
+						referencesToRemove.Add(pair.Key, reference);
 				}
 			}
 
-			List<string> inactiveScenes = new List<string>();
-			foreach (KeyValuePair<string, SceneReference> pair in _scenes)
+			foreach (var reference in referencesToRemove)
 			{
-				yield return pair.Value.Process();
-				if (!pair.Value.Active)
-					inactiveScenes.Add(pair.Key);
+				yield return CleanupFeature(reference.Value);
+				_features[reference.Key].Remove(reference.Value);
 			}
-			inactiveScenes.ForEach(key => _scenes.Remove(key));
+			
+			var scenes = new List<SceneReference>(_scenes.Values);
+			
+			foreach (var scene in scenes)
+				yield return scene.Process();
+
+			var scenesToRemove = new List<string>();
+			foreach (var scene in _scenes)
+			{
+				if (!scene.Value.Active)
+					scenesToRemove.Add(scene.Key);
+			}
+
+			foreach (var scene in scenesToRemove)
+				_scenes.Remove(scene);
 
 			foreach (KeyValuePair<string, List<FeatureReference>> pair in _features)
 			{
@@ -476,7 +486,10 @@ namespace Fuse.Core
 
 			private IEnumerable<MemberInfo> GetMembers()
 			{
-				return _asset.GetType().FindMembers(MemberTypes.All, Constants.FeatureFlags, null, null);
+				if (_asset)
+					return _asset.GetType().FindMembers(MemberTypes.All, Constants.FeatureFlags, null, null);
+
+				return new MemberInfo[0];
 			}
 
 			private static Type FindType(string qualifiedTypeName)
