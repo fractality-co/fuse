@@ -8,6 +8,7 @@ using Fuse.Core;
 using Fuse.Feature;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
 using UnityEditor.Callbacks;
 using UnityEditor.SceneManagement;
 using UnityEditorInternal;
@@ -22,7 +23,7 @@ namespace Fuse.Editor
 	/// <summary>
 	/// Handles the generation and post-processing of assets for <see cref="Fuse"/>.
 	/// </summary>
-	public class AssetGenerator : AssetPostprocessor, IPreprocessBuild
+	public class AssetGenerator : AssetPostprocessor, IPreprocessBuildWithReport
 	{
 		private const string SimulateMenuItem = "Fuse/Assets/Simulate %&m";
 
@@ -31,7 +32,7 @@ namespace Fuse.Editor
 			get { return 0; }
 		}
 
-		public void OnPreprocessBuild(BuildTarget target, string path)
+		public void OnPreprocessBuild(BuildReport report)
 		{
 			if (AssetBundles.Simulate)
 				Logger.Exception("You can not make a build while in asset simulation mode.");

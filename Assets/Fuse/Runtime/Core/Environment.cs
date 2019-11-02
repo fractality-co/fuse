@@ -84,26 +84,16 @@ public static class BuildTargetExtensions
 				return RuntimePlatform.IPhonePlayer;
 			case BuildTarget.Android:
 				return RuntimePlatform.Android;
-			case BuildTarget.StandaloneLinux:
 			case BuildTarget.StandaloneLinux64:
-			case BuildTarget.StandaloneLinuxUniversal:
 				return RuntimePlatform.LinuxPlayer;
 			case BuildTarget.WebGL:
 				return RuntimePlatform.WebGLPlayer;
 			case BuildTarget.WSAPlayer:
 				return RuntimePlatform.WSAPlayerX86;
-			case BuildTarget.Tizen:
-				return RuntimePlatform.TizenPlayer;
-			case BuildTarget.PSP2:
-				return RuntimePlatform.PSP2;
 			case BuildTarget.PS4:
 				return RuntimePlatform.PS4;
-			case BuildTarget.PSM:
-				return RuntimePlatform.PSM;
 			case BuildTarget.XboxOne:
 				return RuntimePlatform.XboxOne;
-			case BuildTarget.WiiU:
-				return RuntimePlatform.WiiU;
 			case BuildTarget.tvOS:
 				return RuntimePlatform.tvOS;
 			case BuildTarget.Switch:
