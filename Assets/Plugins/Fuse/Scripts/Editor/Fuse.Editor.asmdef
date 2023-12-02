@@ -1,0 +1,17 @@
+{
+    "name": "Fuse.Editor",
+    "references": [
+        "GUID:dccddd1d1f67144d9b2fa298221e2703"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

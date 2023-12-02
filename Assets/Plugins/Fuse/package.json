@@ -1,0 +1,20 @@
+{
+    "name": "co.fractality.fuse",
+    "version": "1.0.73",
+    "license": "",
+    "displayName": "FUSE",
+    "description": "FUSE is a robust and extendable application framework for Unity.",
+    "unity": "2020.3",
+    "keywords": [
+        "FUSE",
+        "fuse",
+        "framework",
+        "application framework",
+        "application"
+    ],
+    "author": {
+        "name": "Fractality",
+        "email": "fuse@fractality.co",
+        "url": "https://fuse.fractality.co"
+    }
+}
