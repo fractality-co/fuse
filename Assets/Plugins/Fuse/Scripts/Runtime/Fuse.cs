@@ -208,7 +208,7 @@ namespace Fuse
 					yield break;
 				}
 
-				Relay.SubscribeAll(OnEventTransition);
+				Events.SubscribeAll(OnEventTransition);
 				yield return SetState(startState);
 				_loader.Progress(1f);
 				_loader.Step("Complete");

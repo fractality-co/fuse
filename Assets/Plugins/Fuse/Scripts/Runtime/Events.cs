@@ -11,7 +11,7 @@ namespace Fuse
         "Relay is a static utility class that manages the centralized publish / subscribe pattern for Fuse. " +
         "You may pass custom event arguments through the system to encapsulate state or results." +
         "\n\nPublish or subscribe events from anywhere, and it is globally broadcast to modules, state and all other listeners.")]
-    public static class Relay
+    public static class Events
     {
         private static readonly Dictionary<string, HashSet<Tuple<MethodBase, object>>> SubscriberMethods =
             new Dictionary<string, HashSet<Tuple<MethodBase, object>>>();
@@ -45,6 +45,11 @@ namespace Fuse
 
             foreach (var global in Global)
                 global.Invoke(id, EventArgs.Empty);
+        }
+
+        public static void Publish(EventArgs args)
+        {
+            // TODO
         }
 
         /// <summary>

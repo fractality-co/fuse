@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e8b706f8a7f48c389edfc9a1968a924, type: 3}
-  m_Name: Start
+  m_Name: World
   m_EditorClassIdentifier: 
   Content: []
   Modules:
   - Example
   Scenes:
-  - Assets/Bundles/Scenes/Start.unity
+  - Assets/Bundles/Scenes/World.unity
   Transitions:
-  - Event: start.continue
-    To: Assets/Bundles/Core/States/World.asset
+  - Event: world.back
+    To: Assets/Bundles/Core/States/Start.asset
   Rect:
     serializedVersion: 2
-    x: 112.5
-    y: 250
+    x: 114.5
+    y: 340
     width: 175
     height: 50

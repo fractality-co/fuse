@@ -5,7 +5,7 @@ using UnityEngine.Events;
 namespace Fuse
 {
     /// <summary>
-    /// Simple subscriber component that listens to events from FUSE's <see cref="Relay"/>.
+    /// Simple subscriber component that listens to events from FUSE's <see cref="Events"/>.
     /// </summary>
     [Document("Events",
         "Simple implementation of a component that subscribes to events coming from the Relay." +
@@ -18,12 +18,12 @@ namespace Fuse
 
         private void OnEnable()
         {
-            Relay.Subscribe(@event, OnPublished);
+            Events.Subscribe(@event, OnPublished);
         }
 
         private void OnDisable()
         {
-            Relay.Unsubscribe(@event, OnPublished);
+            Events.Unsubscribe(@event, OnPublished);
         }
 
         private void OnPublished(EventArgs eventArgs)

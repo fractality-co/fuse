@@ -5,7 +5,7 @@ using JetBrains.Annotations;
 namespace Fuse
 {
     /// <summary>
-    /// When <see cref="Relay"/> are published, this will listen for matching events and invoke when found.
+    /// When <see cref="Events"/> are published, this will listen for matching events and invoke when found.
     /// Events are only processed while in the Active phase of the <see cref="Lifecycle" />.
     /// </summary>
     [MeansImplicitUse]
@@ -20,12 +20,17 @@ namespace Fuse
         private readonly string _id;
 
         /// <summary>
-        /// When <see cref="Relay"/> are published, this will listen for matching events and invoke when found.
+        /// When <see cref="Events"/> are published, this will listen for matching events and invoke when found.
         /// Events are only processed while in the Active phase of the <see cref="Lifecycle" />.
         /// </summary>
         public SubscribeAttribute(string eventId)
         {
             _id = eventId;
+        }
+        
+        public SubscribeAttribute(Type type)
+        {
+            _id = type.Name;
         }
 
         public uint Order => 0;
@@ -34,12 +39,12 @@ namespace Fuse
 
         public void OnEnter(MemberInfo target, object instance)
         {
-            Relay.Subscribe(_id, new Tuple<MethodBase, object>(GetMethod(target), instance));
+            Events.Subscribe(_id, new Tuple<MethodBase, object>(GetMethod(target), instance));
         }
 
         public void OnExit(MemberInfo target, object instance)
         {
-            Relay.Unsubscribe(_id, new Tuple<MethodBase, object>(GetMethod(target), instance));
+            Events.Unsubscribe(_id, new Tuple<MethodBase, object>(GetMethod(target), instance));
         }
 
         private static MethodBase GetMethod(MemberInfo memberInfo)

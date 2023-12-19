@@ -16,8 +16,7 @@ MonoBehaviour:
   Start: Assets/Bundles/Core/States/Start.asset
   Environment: Assets/Bundles/Core/Environments/Default.asset
   Modules:
-  - Ejemplo
-  Scenes:
-  - Assets/Bundles/Scenes/World.unity
+  - Fuse.LifecycleLogger
+  Scenes: []
   Content:
   - Assets/Bundles/Content/Default/Default.asset

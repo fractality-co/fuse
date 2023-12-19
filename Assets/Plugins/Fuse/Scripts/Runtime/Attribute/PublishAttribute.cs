@@ -5,7 +5,7 @@ using JetBrains.Annotations;
 namespace Fuse
 {
     /// <summary>
-    /// Publish an event through <see cref="Relay"/>, which will notify all subscribers.
+    /// Publish an event through <see cref="Events"/>, which will notify all subscribers.
     /// Events are only processed while in the Active phase of the <see cref="Lifecycle" />.
     /// Requires a type of <see cref="EventHandler" />, and when invoking pass (this, EventArgs.empty ?? yourEventArgs).
     /// </summary>
@@ -22,7 +22,7 @@ namespace Fuse
         private readonly object[] _handler;
 
         /// <summary>
-        /// Publish an event through <see cref="Relay"/>, which will notify all subscribers.
+        /// Publish an event through <see cref="Events"/>, which will notify all subscribers.
         /// Events are only processed while in the Active phase of the <see cref="Lifecycle" />.
         /// Requires a type of <see cref="EventHandler" />, and when invoking pass (this, EventArgs.empty ?? yourEventArgs).
         /// </summary>
@@ -56,7 +56,7 @@ namespace Fuse
 
         private void OnEvent(object sender, EventArgs eventArgs)
         {
-            Relay.Publish(_id, eventArgs);
+            Events.Publish(_id, eventArgs);
         }
     }
 }

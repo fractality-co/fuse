@@ -6,7 +6,7 @@ using UnityEngine.Serialization;
 namespace Fuse
 {
 	/// <summary>
-	/// Simple publisher component that publishes events over FUSE's <see cref="Relay"/>.
+	/// Simple publisher component that publishes events over FUSE's <see cref="Events"/>.
 	/// </summary>
 	[Document("Events",
 		"Simple implementation of a component that publishes out events over the Relay." +
@@ -36,7 +36,7 @@ namespace Fuse
 		public void Publish()
 		{
 			if (!string.IsNullOrEmpty(eventId))
-				Relay.Publish(eventId, EventArgs.Empty);
+				Events.Publish(eventId, EventArgs.Empty);
 		}
 
 		/// <summary>
@@ -45,7 +45,7 @@ namespace Fuse
 		public void Publish(string evt)
 		{
 			if (!string.IsNullOrEmpty(evt))
-				Relay.Publish(evt, EventArgs.Empty);
+				Events.Publish(evt, EventArgs.Empty);
 		}
 
 		/// <summary>
@@ -54,7 +54,7 @@ namespace Fuse
 		public void Publish(string evt, EventArgs evtArgs)
 		{
 			if (!string.IsNullOrEmpty(evt))
-				Relay.Publish(evt, evtArgs);
+				Events.Publish(evt, evtArgs);
 		}
 	}
 }

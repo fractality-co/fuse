@@ -12,5 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57a0aa1d008b4bdb9a571a903c19f823, type: 3}
   m_Name: Default
   m_EditorClassIdentifier: 
-  properties: []
-  assets: []
+  properties:
+  - key: example.message
+    value: Hello World!
+  assets:
+  - key: 
+    value: {fileID: 6535695442264017216, guid: e6c2392a7117f12458b24a96615d8103, type: 3}

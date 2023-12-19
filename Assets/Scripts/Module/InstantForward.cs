@@ -6,6 +6,6 @@ public class InstantForward : Module
     [Invoke]
     private void Start()
     {
-        Relay.Publish("event.id");
+        Events.Publish("event.id");
     }
 }
