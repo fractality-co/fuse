@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * Copyright (2020) Fractality LLC - All Rights Reserved
+ * 
+ * Unauthorized copying of this file, via any medium is strictly prohibited
+ * Proprietary and confidential
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -69,7 +76,7 @@ namespace Fuse
             var subPath = string.Empty;
 
             if (platformUnique)
-                subPath = Application.platform.GetPlatformName() + "/";
+                subPath = Application.platform.GetBuildPlatformName() + "/";
 
             return new Uri(hostUri + "/" + subPath + filePath);
         }

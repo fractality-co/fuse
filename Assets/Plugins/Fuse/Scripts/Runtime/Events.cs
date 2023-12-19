@@ -1,141 +1,141 @@
+/*
+ * Copyright (2020) Fractality LLC - All Rights Reserved
+ * 
+ * Unauthorized copying of this file, via any medium is strictly prohibited
+ * Proprietary and confidential
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 
 namespace Fuse
 {
-    /// <summary>
-    /// Centralized publish / subscribe for <see cref="Fuse"/>.
-    /// </summary>
-    [Document("Events",
-        "Relay is a static utility class that manages the centralized publish / subscribe pattern for Fuse. " +
-        "You may pass custom event arguments through the system to encapsulate state or results." +
-        "\n\nPublish or subscribe events from anywhere, and it is globally broadcast to modules, state and all other listeners.")]
-    public static class Events
-    {
-        private static readonly Dictionary<string, HashSet<Tuple<MethodBase, object>>> SubscriberMethods =
-            new Dictionary<string, HashSet<Tuple<MethodBase, object>>>();
+	/// <summary>
+	/// Centralized publish / subscribe for <see cref="Fuse"/>.
+	/// </summary>
+	[Document("Events",
+		"Relay is a static utility class that manages the centralized publish / subscribe pattern for Fuse. " +
+		"You may pass custom event arguments through the system to encapsulate state or results." +
+		"\n\nPublish or subscribe events from anywhere, and it is globally broadcast to modules, state and all other listeners.")]
+	public static class Events
+	{
+		private static readonly Dictionary<string, HashSet<Tuple<MethodBase, object>>> SubscriberMethods =
+			new Dictionary<string, HashSet<Tuple<MethodBase, object>>>();
 
-        private static readonly Dictionary<string, HashSet<Action<EventArgs>>> Subscribers =
-            new Dictionary<string, HashSet<Action<EventArgs>>>();
+		private static readonly Dictionary<string, HashSet<Action<EventArgs>>> Subscribers =
+			new Dictionary<string, HashSet<Action<EventArgs>>>();
 
-        private static readonly HashSet<Action<string, EventArgs>> Global =
-            new HashSet<Action<string, EventArgs>>();
+		private static readonly HashSet<Action<string, EventArgs>> Global =
+			new HashSet<Action<string, EventArgs>>();
 
-        /// <summary>
-        /// Publishes an event to subscribers with optional parameters passed.
-        /// </summary>
-        public static void Publish(string id)
-        {
-            if (Subscribers.ContainsKey(id))
-            {
-                foreach (var subscriber in Subscribers[id])
-                    subscriber.Invoke(EventArgs.Empty);
-            }
+		/// <summary>
+		/// Publishes an event to subscribers with optional parameters passed.
+		/// </summary>
+		public static void Publish(string id)
+		{
+			if (Subscribers.ContainsKey(id))
+			{
+				foreach (var subscriber in Subscribers[id])
+					subscriber.Invoke(EventArgs.Empty);
+			}
 
-            if (SubscriberMethods.ContainsKey(id))
-            {
-                var arg = new object[] {EventArgs.Empty};
-                foreach (var (method, instance) in SubscriberMethods[id])
-                {
-                    if (instance != null)
-                        method.Invoke(instance, arg);
-                }
-            }
+			if (SubscriberMethods.ContainsKey(id))
+			{
+				var arg = new object[] { EventArgs.Empty };
+				foreach (var (method, instance) in SubscriberMethods[id])
+				{
+					if (instance != null)
+						method.Invoke(instance, arg);
+				}
+			}
 
-            foreach (var global in Global)
-                global.Invoke(id, EventArgs.Empty);
-        }
+			foreach (var global in Global)
+				global.Invoke(id, EventArgs.Empty);
+		}
 
-        public static void Publish(EventArgs args)
-        {
-            // TODO
-        }
+		public static void Publish(EventArgs args) { Publish(args.GetType().ToString(), args); }
 
-        /// <summary>
-        /// Publishes an event to subscribers with optional parameters passed.
-        /// </summary>
-        public static void Publish(string id, EventArgs args)
-        {
-            if (Subscribers.ContainsKey(id))
-            {
-                var subscribers = Subscribers[id];
-                foreach (var subscriber in subscribers)
-                    subscriber.Invoke(args);
-            }
+		/// <summary>
+		/// Publishes an event to subscribers with optional parameters passed.
+		/// </summary>
+		public static void Publish(string id, EventArgs args)
+		{
+			if (Subscribers.ContainsKey(id))
+			{
+				var subscribers = Subscribers[id];
+				foreach (var subscriber in subscribers)
+					subscriber.Invoke(args);
+			}
 
-            if (SubscriberMethods.ContainsKey(id))
-            {
-                var arg = new object[] {args};
-                foreach (var (method, instance) in SubscriberMethods[id])
-                {
-                    if (instance != null)
-                        method.Invoke(instance, arg);
-                }
-            }
+			if (SubscriberMethods.ContainsKey(id))
+			{
+				var arg = new object[] { args };
+				foreach (var (method, instance) in SubscriberMethods[id])
+				{
+					if (instance != null)
+						method.Invoke(instance, arg);
+				}
+			}
 
-            foreach (var global in Global)
-                global.Invoke(id, args);
-        }
+			foreach (var global in Global)
+				global.Invoke(id, args);
+		}
 
-        /// <summary>
-        /// Subscribe to an asynchronous event with parameters.
-        /// </summary>
-        public static void Subscribe(string id, Tuple<MethodBase, object> onPublished)
-        {
-            if (!SubscriberMethods.ContainsKey(id))
-                SubscriberMethods.Add(id, new HashSet<Tuple<MethodBase, object>>());
+		public static void Subscribe<T>(Type type, Action<EventArgs> onPublished) { Subscribe(type.ToString(), onPublished); }
 
-            SubscriberMethods[id].Add(onPublished);
-        }
+		/// <summary>
+		/// Subscribe to an asynchronous event with parameters.
+		/// </summary>
+		public static void Subscribe(string id, Tuple<MethodBase, object> onPublished)
+		{
+			if (!SubscriberMethods.ContainsKey(id))
+				SubscriberMethods.Add(id, new HashSet<Tuple<MethodBase, object>>());
 
-        /// <summary>
-        /// Subscribe to an asynchronous event with parameters.
-        /// </summary>
-        public static void Subscribe(string id, Action<EventArgs> onPublished)
-        {
-            if (!Subscribers.ContainsKey(id))
-                Subscribers.Add(id, new HashSet<Action<EventArgs>>());
+			SubscriberMethods[id].Add(onPublished);
+		}
 
-            Subscribers[id].Add(onPublished);
-        }
+		/// <summary>
+		/// Subscribe to an asynchronous event with parameters.
+		/// </summary>
+		public static void Subscribe(string id, Action<EventArgs> onPublished)
+		{
+			if (!Subscribers.ContainsKey(id))
+				Subscribers.Add(id, new HashSet<Action<EventArgs>>());
 
-        /// <summary>
-        /// Subscribe to an asynchronous event with parameters.
-        /// </summary>
-        public static void SubscribeAll(Action<string, EventArgs> onPublished)
-        {
-            Global.Add(onPublished);
-        }
+			Subscribers[id].Add(onPublished);
+		}
 
-        /// <summary>
-        /// Unsubscribe from an event.
-        /// </summary>
-        public static void Unsubscribe(string id, Action<EventArgs> onPublished)
-        {
-            if (!Subscribers.ContainsKey(id))
-                return;
+		/// <summary>
+		/// Subscribe to an asynchronous event with parameters.
+		/// </summary>
+		public static void SubscribeAll(Action<string, EventArgs> onPublished) { Global.Add(onPublished); }
 
-            Subscribers[id].Remove(onPublished);
-        }
+		/// <summary>
+		/// Unsubscribe from an event.
+		/// </summary>
+		public static void Unsubscribe(string id, Action<EventArgs> onPublished)
+		{
+			if (!Subscribers.ContainsKey(id))
+				return;
 
-        /// <summary>
-        /// Unsubscribe from an event.
-        /// </summary>
-        public static void Unsubscribe(string id, Tuple<MethodBase, object> onPublished)
-        {
-            if (!SubscriberMethods.ContainsKey(id))
-                return;
+			Subscribers[id].Remove(onPublished);
+		}
 
-            SubscriberMethods[id].Remove(onPublished);
-        }
+		/// <summary>
+		/// Unsubscribe from an event.
+		/// </summary>
+		public static void Unsubscribe(string id, Tuple<MethodBase, object> onPublished)
+		{
+			if (!SubscriberMethods.ContainsKey(id))
+				return;
 
-        /// <summary>
-        /// Subscribe to an asynchronous event with parameters.
-        /// </summary>
-        public static void UnsubscribeAll(Action<string, EventArgs> onPublished)
-        {
-            Global.Remove(onPublished);
-        }
-    }
+			SubscriberMethods[id].Remove(onPublished);
+		}
+
+		/// <summary>
+		/// Subscribe to an asynchronous event with parameters.
+		/// </summary>
+		public static void UnsubscribeAll(Action<string, EventArgs> onPublished) { Global.Remove(onPublished); }
+	}
 }

@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * Copyright (2021) Fractality LLC - All Rights Reserved
+ * 
+ * Unauthorized copying of this file, via any medium is strictly prohibited
+ * Proprietary and confidential
+ */
+
+using System;
 using System.Reflection;
 using JetBrains.Annotations;
 
@@ -27,10 +34,10 @@ namespace Fuse
         {
             _id = eventId;
         }
-        
-        public SubscribeAttribute(Type type)
+
+        public SubscribeAttribute(Type eventType)
         {
-            _id = type.Name;
+            _id = eventType.ToString();
         }
 
         public uint Order => 0;

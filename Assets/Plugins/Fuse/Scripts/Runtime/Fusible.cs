@@ -1,4 +1,11 @@
-﻿using System.Collections;
+﻿/*
+ * Copyright (2020) Fractality LLC - All Rights Reserved
+ * 
+ * Unauthorized copying of this file, via any medium is strictly prohibited
+ * Proprietary and confidential
+ */
+
+using System.Collections;
 using System.Reflection;
 
 namespace Fuse
